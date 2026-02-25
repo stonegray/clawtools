@@ -1,0 +1,25 @@
+# Files and directories excluded from the published NPM package.
+#
+# The `files` field in package.json already allowlists dist/, README.md, and
+# LICENSE — this file adds explicit denials for anything that might otherwise
+# sneak in (e.g. dotfiles, CI config, test artifacts).
+
+# Source — consumers get the compiled dist/ only
+src/
+test/
+respec/
+docs/
+openclaw/
+
+# Config / tooling
+tsconfig*.json
+vitest.config.ts
+.github/
+.gitignore
+.gitmodules
+.env*
+
+# Build artifacts that should not be in the package
+coverage/
+*.tgz
+*.log

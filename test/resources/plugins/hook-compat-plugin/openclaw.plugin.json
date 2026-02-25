@@ -1,0 +1,6 @@
+{
+  "id": "hook-compat-plugin",
+  "name": "Hook Compat Plugin",
+  "description": "Exercises all PluginApi no-op methods to verify OpenClaw plugin compatibility.",
+  "version": "1.0.0"
+}

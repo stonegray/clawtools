@@ -1,0 +1,16 @@
+{
+  "name": "@clawtools-examples/openai-connector",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Example: Connect to OpenAI and stream a response",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "clawtools": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

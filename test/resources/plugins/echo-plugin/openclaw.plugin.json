@@ -1,0 +1,6 @@
+{
+  "id": "echo-plugin",
+  "name": "Echo Plugin",
+  "description": "Test plugin that echoes inputs. Registers one tool and one connector.",
+  "version": "1.0.0"
+}

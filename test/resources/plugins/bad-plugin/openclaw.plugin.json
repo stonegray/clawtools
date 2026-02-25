@@ -1,0 +1,5 @@
+{
+  "id": "bad-plugin",
+  "name": "Bad Plugin",
+  "description": "A plugin with no entry point file. Used to test that the loader skips unloadable plugins gracefully."
+}

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "clawtools": ["./src/index.ts"],
+      "clawtools/tools": ["./src/tools/index.ts"],
+      "clawtools/connectors": ["./src/connectors/index.ts"],
+      "clawtools/plugins": ["./src/plugins/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "openclaw"]
+}

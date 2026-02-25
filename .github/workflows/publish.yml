@@ -1,0 +1,139 @@
+# Publish — triggered only when a version tag is pushed to main
+#
+# Flow:
+#   push tag v* on main
+#     → run full CI (typecheck + test + build)
+#     → publish to NPM with provenance
+#     → create GitHub Release with auto-generated notes
+#
+# Required repo secrets:
+#   NPM_TOKEN  — Automation token from npmjs.com (Settings → Access Tokens)
+#
+# Required repo settings:
+#   Settings → Actions → General → "Allow GitHub Actions to create releases"
+#   Settings → Environments → "npm" → add NPM_TOKEN secret there (recommended)
+#
+# To release:
+#   npm version patch   # or minor / major
+#   git push origin main --follow-tags
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main   # tag pushes arrive as both a tag event and a branch push
+
+# Only allow one publish at a time
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gate: re-run the full CI suite on the exact commit being published
+  # ---------------------------------------------------------------------------
+  ci:
+    name: CI gate
+    runs-on: ubuntu-latest
+    # Only run the publish flow when a tag was pushed (not plain branch pushes)
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify dist/
+        run: |
+          [ -d dist ] && [ "$(find dist -name '*.js' | wc -l)" -gt 0 ] \
+            || { echo "Build produced no output"; exit 1; }
+
+  # ---------------------------------------------------------------------------
+  # Publish to NPM
+  # ---------------------------------------------------------------------------
+  publish-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    # Scoped environment keeps NPM_TOKEN isolated from CI jobs
+    environment: npm
+
+    # Required for npm publish --provenance (OIDC)
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Fail fast if the package.json version doesn't match the pushed tag
+      - name: Assert version matches tag
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME}"
+          echo "package.json: $PKG_VERSION  tag: $TAG_VERSION"
+          [ "$PKG_VERSION" = "$TAG_VERSION" ] \
+            || { echo "Version mismatch — bump package.json before tagging"; exit 1; }
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # GitHub Release (runs in parallel with publish)
+  # ---------------------------------------------------------------------------
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for auto-generated changelog
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}   # e.g. v1.0.0-beta.1
