@@ -73,6 +73,9 @@ export type {
     StreamEvent,
     StreamOptions,
     StreamContext,
+    UserMessage,
+    AssistantMessage,
+    ConversationMessage,
 
     // Plugin types
     PluginDefinition,
@@ -181,6 +184,20 @@ export interface ClawtoolsOptions {
      * Has no effect on `createClawtools()` (sync), which never loads connectors.
      */
     skipBuiltinConnectors?: boolean;
+
+    /**
+     * If true, start loading tools and connectors in the background but return
+     * the `Clawtools` instance immediately without waiting.
+     *
+     * Useful when you only need catalog metadata at startup (listing providers,
+     * filtering by profile, etc.) and want to defer the cost of pulling in all
+     * provider SDKs until they are actually needed. Await `ct.ready` before
+     * calling `resolveAll()` or streaming when using this mode.
+     *
+     * Has no effect on `createClawtools()` (sync), which never performs async
+     * loading.
+     */
+    lazy?: boolean;
 }
 
 /**
@@ -193,6 +210,16 @@ export interface Clawtools {
     connectors: ConnectorRegistry;
     /** Discovered openclaw extensions metadata. */
     extensions: ExtensionInfo[];
+    /**
+     * Resolves when all background loading is complete.
+     *
+     * For `createClawtools()` (sync) this is always already resolved.
+     * For `createClawtoolsAsync()` without `lazy: true` this is also already
+     * resolved by the time the instance is returned.
+     * For `createClawtoolsAsync({ lazy: true })`, await this before calling
+     * `tools.resolveAll()` or streaming for the first time.
+     */
+    ready: Promise<void>;
 }
 
 /**
@@ -240,6 +267,7 @@ export function createClawtools(options?: ClawtoolsOptions): Clawtools {
         tools: toolRegistry,
         connectors: connectorRegistry,
         extensions,
+        ready: Promise.resolve(),
     };
 }
 
@@ -269,25 +297,40 @@ export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<
     const toolRegistry = new ToolRegistry();
     const connectorRegistry = new ConnectorRegistry();
 
-    if (!options?.skipCoreTools) {
-        await discoverCoreToolsAsync(toolRegistry, {
-            openclawRoot: options?.openclawRoot,
-            ...options?.tools,
-        });
-    }
+    // Build the two load tasks and run them concurrently to avoid serialising
+    // what are effectively two independent dynamic imports.
+    const toolsLoad = options?.skipCoreTools
+        ? Promise.resolve()
+        : discoverCoreToolsAsync(toolRegistry, {
+              openclawRoot: options?.openclawRoot,
+              ...options?.tools,
+          });
 
-    if (!options?.skipBuiltinConnectors) {
-        const builtins = await discoverBuiltinConnectorsAsync();
-        for (const connector of builtins) {
-            connectorRegistry.register(connector);
-        }
-    }
+    const connectorsLoad = options?.skipBuiltinConnectors
+        ? Promise.resolve()
+        : discoverBuiltinConnectorsAsync().then((builtins) => {
+              for (const connector of builtins) {
+                  connectorRegistry.register(connector);
+              }
+          });
 
     const extensions = discoverExtensions(options?.extensionsDir);
+
+    if (options?.lazy) {
+        // Start both loads in the background; callers can await `ready` when
+        // they need the registries to be fully populated.
+        const ready = Promise.all([toolsLoad, connectorsLoad]).then(() => undefined);
+        return { tools: toolRegistry, connectors: connectorRegistry, extensions, ready };
+    }
+
+    // Default: wait for everything before returning, same observable behaviour
+    // as before but both loads now run concurrently rather than in series.
+    await Promise.all([toolsLoad, connectorsLoad]);
 
     return {
         tools: toolRegistry,
         connectors: connectorRegistry,
         extensions,
+        ready: Promise.resolve(),
     };
 }

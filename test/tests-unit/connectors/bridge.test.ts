@@ -310,7 +310,7 @@ describe("toContext (via piStream call inspection)", () => {
     });
 
     it("passes messages array unchanged", async () => {
-        const messages = [{ role: "user", content: "hi" }];
+        const messages = [{ role: "user" as const, content: "hi" }];
         const ctx = await getCalledCtx({ messages });
         expect(ctx.messages).toEqual(messages);
     });

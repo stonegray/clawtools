@@ -275,6 +275,35 @@ export type StreamEvent =
     | { type: "error"; error: string };
 
 // =============================================================================
+// Conversation Message Types
+// =============================================================================
+
+/**
+ * A user turn in the conversation.
+ *
+ * `content` can be a plain string or a multimodal array of blocks (text,
+ * image_url, …) following the provider's expected shape.
+ */
+export interface UserMessage {
+    role: "user";
+    content: string | Array<{ type: string; [key: string]: unknown }>;
+}
+
+/**
+ * An assistant turn in the conversation.
+ *
+ * `content` may be a plain string, a multimodal block array, or null for
+ * tool-use-only responses.
+ */
+export interface AssistantMessage {
+    role: "assistant";
+    content: string | null | Array<{ type: string; [key: string]: unknown }>;
+}
+
+/** Union of all first-class conversation message types. */
+export type ConversationMessage = UserMessage | AssistantMessage;
+
+// =============================================================================
 // Connector Definition
 // =============================================================================
 
@@ -290,7 +319,7 @@ export interface StreamOptions {
 /** Context for an LLM invocation. */
 export interface StreamContext {
     systemPrompt?: string;
-    messages: Array<Record<string, unknown>>;
+    messages: Array<UserMessage | AssistantMessage>;
     tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 

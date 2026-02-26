@@ -193,7 +193,7 @@ export function createTestApp(config: AppConfig) {
 
             const tools = ct.tools.resolveAll();
             const context = {
-                messages: [{ role: "user", content: prompt }] as Array<Record<string, unknown>>,
+                messages: [{ role: "user" as const, content: prompt }],
                 tools: tools.map((t) => ({
                     name: t.name,
                     description: t.description,
