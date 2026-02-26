@@ -7,9 +7,11 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
     test: {
         environment: "node",
+        testTimeout: 60_000,
         include: [
             "test/tests-unit/**/*.test.ts",
             "test/tests-integration/**/*.test.ts",
+            "test/tests-e2e/**/*.test.ts",
             "test/test-build/**/*.test.ts",
         ],
         reporters: ["verbose"],
