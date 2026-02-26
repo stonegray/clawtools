@@ -9,10 +9,10 @@ Demonstrates how to create a minimal OpenAI connector and stream a "Hello world"
 export OPENAI_API_KEY=sk-...
 
 # Run from the repository root
-npx tsx examples/openai-connector/index.ts
+npx tsx examples/connector/openai/index.ts
 
 # Or with pnpm from the example directory
-cd examples/openai-connector
+cd examples/connector/openai
 pnpm start
 ```
 

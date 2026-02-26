@@ -1,5 +1,5 @@
 {
-  "name": "@clawtools-examples/openai-connector",
+  "name": "@clawtools-examples/connector-openai",
   "version": "0.0.0",
   "private": true,
   "type": "module",

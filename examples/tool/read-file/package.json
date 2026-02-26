@@ -1,0 +1,16 @@
+{
+  "name": "@clawtools-examples/tool-read-file",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Example: Call the read tool directly without an LLM",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "clawtools": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
