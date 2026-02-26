@@ -50,8 +50,16 @@ export interface ErrorScenario {
     code?: string;
 }
 
+/**
+ * Hold the connection open indefinitely without sending any SSE data.
+ * Use this to test AbortSignal propagation: the client must abort to unblock.
+ */
+export interface HungScenario {
+    type: "hung";
+}
+
 /** Union of all possible mock server behaviors. */
-export type MockScenario = TextScenario | ToolCallScenario | ErrorScenario;
+export type MockScenario = TextScenario | ToolCallScenario | ErrorScenario | HungScenario;
 
 // =============================================================================
 // Request capture

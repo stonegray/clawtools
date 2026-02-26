@@ -14,6 +14,7 @@ import type { Server, IncomingMessage, ServerResponse } from "node:http";
 import type {
     CapturedRequest,
     ErrorScenario,
+    HungScenario,
     MockScenario,
     TextScenario,
     ToolCallScenario,
@@ -54,6 +55,9 @@ export class OpenAIMockServer {
     }
 
     stop(): Promise<void> {
+        // Force-close any kept-alive or hung connections (e.g. hung scenario) so
+        // server.close() resolves immediately rather than waiting for them.
+        this.server.closeAllConnections();
         return new Promise((resolve, reject) => {
             this.server.close((err) => (err ? reject(err) : resolve()));
         });
@@ -156,6 +160,16 @@ export class OpenAIMockServer {
             return this.sendError(res, scenario);
         }
 
+        if (scenario.type === "hung") {
+            if (!stream) {
+                // Hung scenario makes no sense for non-streaming; treat as empty text
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ choices: [] }));
+                return;
+            }
+            return this.streamHung(res);
+        }
+
         if (!stream) {
             return this.sendNonStreaming(res, scenario);
         }
@@ -171,6 +185,18 @@ export class OpenAIMockServer {
         } else if (scenario.type === "tool_call") {
             this.streamToolCall(res, scenario);
         }
+    }
+
+    private streamHung(res: ServerResponse): void {
+        // Write SSE headers so fetch() resolves and the client starts reading,
+        // then never send any data or close the response.  The test must
+        // abort the request via an AbortSignal to unblock.
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+        });
+        // Intentionally do NOT call res.end() or write any data.
     }
 
     private sendError(res: ServerResponse, scenario: ErrorScenario): void {
