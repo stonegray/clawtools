@@ -1,5 +1,5 @@
 {
-  "name": "clawtools",
+  "name": "@stonegray/clawtools",
   "version": "0.1.0",
   "description": "Platform-agnostic adapter exposing OpenClaw tools and connectors to third-party software",
   "type": "module",
