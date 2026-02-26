@@ -36,22 +36,45 @@ The synchronous `createClawtools()` convenience function internally calls
 
 ---
 
-## 3. Three core tools cannot load without a live OpenClaw runtime
+## 3. Three core tools require explicit configuration in `ToolContext`
 
-**Status:** Upstream dependency — cannot fix without openclaw changes.
+**Status:** By design — configuration-gated, not broken.
 
-`memory_search` and `memory_get` require a memory backend config object passed
-to their factories. Without it the factory throws. These two tools are fully
-bundled in `dist/core-tools/` but are only functional when used inside an
-OpenClaw agent context that supplies the config.
+`memory_search`, `memory_get`, and `image` are fully bundled in `dist/core-tools/`
+and their factories work correctly when called with the right `ToolContext`. They
+do **not** require a live OpenClaw runtime or daemon.
 
-The `image` tool requires the native `sharp` module (not bundled). It is listed
-in the catalog but its factory returns `null` on systems without `sharp`
-installed.
+When `resolveAll()` is called with an empty context (`{}`), these three return
+`null` because their factories need specific fields:
 
-**Impact:** `discoverCoreToolsAsync()` reports these three as loaded (factories
-exist in the bundle) but `resolveAll()` with an empty context returns `null` for
-them. No errors are thrown; the tools are silently absent from the resolved list.
+- **`memory_search` / `memory_get`** — require `config` to be set (any object,
+  even `{}`, is sufficient). Without `config` the factory returns `null`.
+- **`image`** — requires `agentDir` (non-empty string) **and** either explicit
+  model config (`config.agents.defaults.imageModel`) or auth-profile files in
+  `agentDir`. Does **not** depend on the native `sharp` module.
+
+**Usage — memory tools:**
+```ts
+const ct = await createClawtoolsAsync();
+const tools = ct.tools.resolveAll({ config: {} });
+// → memory_search and memory_get are included
+```
+
+**Usage — image tool:**
+```ts
+const ct = await createClawtoolsAsync();
+const tools = ct.tools.resolveAll({
+  agentDir: "/path/to/agent",
+  config: { agents: { defaults: { imageModel: "openai/gpt-4o" } } },
+});
+// → image tool is included (execute still needs a valid API key)
+```
+
+**Impact:** `resolveAll()` with an empty context silently omits these tools.
+Users must supply the appropriate `ToolContext` fields to enable them. The tools
+instantiate (factory returns non-null), but execution of memory tools requires
+accessible memory backends and execution of the image tool requires valid API
+credentials.
 
 ---
 

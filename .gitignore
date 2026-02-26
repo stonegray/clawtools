@@ -9,3 +9,6 @@ coverage/
 # npm pack dry-run output
 *.tgz
 
+# Scratch / exploratory scripts
+tmp/
+

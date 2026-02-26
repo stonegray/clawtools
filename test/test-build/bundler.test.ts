@@ -484,7 +484,7 @@ describe.skipIf(!BUNDLES_BUILT)("4. Bundle loading", () => {
             const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
             const tool = factory() as Record<string, unknown> | null;
 
-            // null is accepted (e.g. image tool when sharp is absent), undefined is not
+            // null is accepted (e.g. image tool when config/agentDir is absent), undefined is not
             if (tool === null) return;
             expect(tool, `"${id}": factory returned undefined`).toBeDefined();
 
@@ -512,10 +512,73 @@ describe.skipIf(!BUNDLES_BUILT)("4. Bundle loading", () => {
     });
 
     it("image tool has the correct factory entry (graceful-degradation documented)", () => {
-        // image requires `sharp` (native addon). Without it the factory returns null.
+        // image requires agentDir + model config. Without them the factory returns null.
         // This test documents the expected disabled-by-default behaviour.
         expect(manifest["image"]).toBeDefined();
         expect(manifest["image"].factory).toBe("createImageTool");
+    });
+
+    // Config-gated tools: verify that supplying a ToolContext with the correct
+    // fields enables memory and image tools (see docs/issues.md §3).
+
+    it("memory_search returns a valid tool when config is supplied", async () => {
+        const entry = manifest["memory_search"];
+        const bundlePath = join(ROOT, "dist", entry.bundle.replace(/^\.\//, ""));
+        const mod = await import(pathToFileURL(bundlePath).href);
+        const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
+
+        const tool = factory({ config: {} }) as Record<string, unknown> | null;
+        expect(tool, "memory_search should not be null with config: {}").not.toBeNull();
+        expect(typeof tool!["name"]).toBe("string");
+        expect(typeof tool!["execute"]).toBe("function");
+        expect(typeof tool!["parameters"]).toBe("object");
+    });
+
+    it("memory_get returns a valid tool when config is supplied", async () => {
+        const entry = manifest["memory_get"];
+        const bundlePath = join(ROOT, "dist", entry.bundle.replace(/^\.\//, ""));
+        const mod = await import(pathToFileURL(bundlePath).href);
+        const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
+
+        const tool = factory({ config: {} }) as Record<string, unknown> | null;
+        expect(tool, "memory_get should not be null with config: {}").not.toBeNull();
+        expect(typeof tool!["name"]).toBe("string");
+        expect(typeof tool!["execute"]).toBe("function");
+    });
+
+    it("memory_search returns null without config", async () => {
+        const entry = manifest["memory_search"];
+        const bundlePath = join(ROOT, "dist", entry.bundle.replace(/^\.\//, ""));
+        const mod = await import(pathToFileURL(bundlePath).href);
+        const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
+
+        expect(factory({})).toBeNull();
+    });
+
+    it("image returns a valid tool when agentDir + imageModel config are supplied", async () => {
+        const entry = manifest["image"];
+        const bundlePath = join(ROOT, "dist", entry.bundle.replace(/^\.\//, ""));
+        const mod = await import(pathToFileURL(bundlePath).href);
+        const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
+
+        const tool = factory({
+            agentDir: "/tmp/fake-agent-dir",
+            config: { agents: { defaults: { imageModel: "openai/gpt-4o" } } },
+        }) as Record<string, unknown> | null;
+
+        expect(tool, "image should not be null with agentDir + imageModel").not.toBeNull();
+        expect(typeof tool!["name"]).toBe("string");
+        expect(typeof tool!["execute"]).toBe("function");
+        expect(typeof tool!["parameters"]).toBe("object");
+    });
+
+    it("image returns null without agentDir", async () => {
+        const entry = manifest["image"];
+        const bundlePath = join(ROOT, "dist", entry.bundle.replace(/^\.\//, ""));
+        const mod = await import(pathToFileURL(bundlePath).href);
+        const factory = mod[entry.factory] as (...args: unknown[]) => unknown;
+
+        expect(factory({})).toBeNull();
     });
 });
 
