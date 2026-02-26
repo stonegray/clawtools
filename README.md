@@ -84,31 +84,7 @@ clawtools/plugins    → loadPlugins
 
 ## Limitations
 
-clawtools is a compatibility adapter, not a runtime. The following OpenClaw features are **not supported**:
-
-**Auth & credentials**
-- No auth profile rotation, per-profile cooldown, or round-robin selection
-- No OAuth credential refresh or token lifecycle management
-- No device code auth flow or interactive provider auth wizard
-
-**Tool safety**
-- No tool loop detection (repeat/poll/ping-pong guards)
-- No exec approval via JSONL socket
-- No per-sender tool allow/deny policies
-
-**Plugin features**
-- No plugin config schema validation (`configSchema` / `safeParse`)
-- No plugin runtime helpers (media, events, TTS, memory)
-- No logger injection or plugin config resolution from global config
-- Requires pre-compiled JS — no jiti/TypeScript dynamic imports
-
-**OpenClaw-only infrastructure (not exposed)**
-- Hook system, channel adapters, gateway RPC server
-- Session persistence, agent loop, LLM streaming runtime
-- Docker/browser sandbox, image sanitization pipeline
-- Full `OpenClawConfig` system, multi-node clustering
-
-> Plugin calls to `registerHook`, `registerHttpHandler`, `registerHttpRoute`, `registerChannel`, `registerGatewayMethod`, `registerCli`, `registerService`, `registerProvider`, `registerCommand`, and `on` are **accepted but silently discarded**. Plugins load without errors; these registrations have no effect.
+clawtools is intentionally minimal: it’s a compatibility layer, not a full OpenClaw runtime. Core behaviors such as auth/profile management, tool‑safety checks, plugin runtime helpers, and the gateway/session infrastructure are deliberately out of scope and simply not implemented. Plugins may still call those APIs, but the calls are ignored.
 
 ## Architecture
 
@@ -144,3 +120,5 @@ clawtools/
 ## License
 
 MIT
+
+> **This project was created entirely using AI.** Zero lines of code were written by a human. Models used during development include Opus 4.5, Opus 4.6, Raptor Mini, GPT 5.2, and Sonnet 3.6.
