@@ -29,7 +29,7 @@ respec/     # specs + PoCs capturing OpenClaw behavior/shape
 scripts/    # build helpers (notably: bundle OpenClaw core tools)
 src/        # clawtools library implementation
 test/       # vitest test suite + fixtures + test app
-tests/      # additional/legacy test workspace (may be empty)
+docs/planning/  # architecture drafts and planning documents (not user-facing)
 ```
 
 `src/` is intentionally small and stable (registries, types, discovery). The heavy lifting of “staying compatible with upstream OpenClaw” happens via `openclaw/` + `scripts/bundle-core-tools.mjs`.

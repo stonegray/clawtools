@@ -47,6 +47,7 @@
     "clean": "rm -rf dist .build-tmp",
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc --project tsconfig.test.json --noEmit",
+    "typecheck:examples": "tsc -p examples/tsconfig.json --noEmit",
     "prepack": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",

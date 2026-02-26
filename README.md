@@ -2,7 +2,7 @@
 
 **clawtools** is a platform-agnostic adapter for [OpenClaw](https://github.com/openclaw/openclaw)'s tool and connector systems. It lets you use OpenClaw-compatible tools, connectors, and plugins as a standalone library — without running the OpenClaw daemon, agent loop, or messaging infrastructure.
 
-**100% OpenClaw compatibility:** clawtools builds directly against the latest OpenClaw source via git submodule and and an advanced custom bundler. Every tool, connector, and plugin interface is compiled from the actual OpenClaw codebase — not stale copies or reimplementations. This guarantees compatibility with the latest OpenClaw releases and is resilliant to upstream changes while avoiding bundling the full code of openclaw.
+**100% OpenClaw compatibility:** clawtools builds directly against the latest OpenClaw source via git submodule and an advanced custom bundler. Every tool, connector, and plugin interface is compiled from the actual OpenClaw codebase — not stale copies or reimplementations. This guarantees compatibility with the latest OpenClaw releases and is resilient to upstream changes while avoiding bundling the full code of openclaw.
 
 ## When to use this library
 

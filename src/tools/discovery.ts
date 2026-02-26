@@ -480,8 +480,14 @@ export function getCoreToolCatalog(): ToolMeta[] {
  * This reads tool metadata from the catalog and registers lazy factories
  * that deep-link into the openclaw submodule for actual implementations.
  *
+ * **Note:** Factories registered by this function always return `null` at
+ * call time because ESM `import()` is asynchronous. Use this function only
+ * for catalog/metadata-only use-cases (listing tools, generating schemas).
+ * For executable tools use {@link discoverCoreToolsAsync} instead.
+ *
  * @param registry - The registry to populate.
  * @param options - Discovery options (filters, paths).
+ * @see discoverCoreToolsAsync
  */
 export function discoverCoreTools(
     registry: ToolRegistry,

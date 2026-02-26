@@ -13,6 +13,6 @@
 - [x] Implement plugin loader (OpenClaw-compatible)
 - [x] Write public entry points and exports
 - [x] Verify build and runtime smoke test
-- [ ] Add user tool registration support (extensibility)
-- [ ] Write unit tests
+- [x] Add user tool registration support (extensibility)
+- [x] Write unit tests
 - [ ] Publish to npm

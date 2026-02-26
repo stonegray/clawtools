@@ -4,8 +4,8 @@
  * Run: OPENAI_API_KEY=sk-... npx tsx examples/openai-connector/index.ts
  */
 
-import type { Connector, StreamContext } from "../../src/types.js";
-import { resolveAuth } from "../../src/connectors/index.js";
+import type { Connector, StreamContext } from "clawtools";
+import { resolveAuth } from "clawtools/connectors";
 
 // Define a minimal OpenAI connector
 const openaiConnector: Connector = {
@@ -60,8 +60,8 @@ const openaiConnector: Connector = {
 
 // Stream "Hello world!" and print the response
 async function main() {
-    const auth = resolveAuth(openaiConnector);
-    if (!auth.apiKey) throw new Error("OPENAI_API_KEY not set");
+    const auth = resolveAuth("openai", openaiConnector.envVars);
+    if (!auth?.apiKey) throw new Error("OPENAI_API_KEY not set");
 
     const context: StreamContext = {
         messages: [{ role: "user", content: "Hello world!" }],
@@ -70,7 +70,7 @@ async function main() {
     for await (const event of openaiConnector.stream(
         { id: "gpt-4o-mini", provider: "openai", api: "openai-completions" },
         context,
-        { apiKey: auth.apiKey },
+        { apiKey: auth!.apiKey },
     )) {
         if (event.type === "text_delta") process.stdout.write(event.delta);
     }

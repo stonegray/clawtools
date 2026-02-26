@@ -122,7 +122,7 @@ const allTools = ct.tools.resolveAll(ctx);
 
 ```ts
 import { createClawtools, jsonResult, textResult, errorResult } from "clawtools";
-import { readStringParam, readNumberParam, ToolInputError } from "clawtools/tools";
+import { readStringParam, readNumberParam, readBooleanParam, ToolInputError } from "clawtools/tools";
 
 const ct = createClawtools();
 
