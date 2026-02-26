@@ -2,7 +2,7 @@
 #
 # Jobs:
 #   lint-typecheck  — tsc --noEmit (catches type errors fast, no output)
-#   test            — vitest run with coverage (matrix: node 18, 20, 22)
+#   test            — vitest run with coverage (matrix: node 20, 22)
 #   build           — full tsc build + verify dist/ is non-empty
 #
 # All three must pass before a PR can merge (enforce via branch protection rules).
@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        node: [20, 22]
 
     steps:
       - uses: actions/checkout@v4

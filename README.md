@@ -6,8 +6,8 @@
 
 ## When to use this library
 
-- **Your project needs tools or access to LLM APIs** — use OpenClaw's battle tested core tools (browser the web, write files) and connectors (openai, copilot, anthropic) in your own pipeline without the full OpenClaw stack
-- **You want to experiment with openclaw plugins** — inspect tool schemas, execute tools directly, and develop against the registry outside the agent loop. (any plugin that works in OpenClaw works here)
+- **Your project needs tools or access to LLM APIs** — use OpenClaw's battle-tested core tools (browse the web, write files, run shell commands) and built-in connectors (Anthropic, OpenAI, Google, Bedrock, …) in your own pipeline without the full OpenClaw stack
+- **You want to experiment with OpenClaw plugins** — inspect tool schemas, execute tools directly, and develop against the registry outside the agent loop (any plugin that works in OpenClaw works here)
 
 ## Installation
 
@@ -15,51 +15,72 @@
 npm install clawtools
 ```
 
+Requires **Node.js ≥ 20**.
+
 ## Quick Start
 
-The simplest usage is creating a `Clawtools` instance and querying its catalog:
-
 ```typescript
-import { createClawtools } from "clawtools";
+import { createClawtoolsAsync } from "clawtools";
+import { extractToolSchemas } from "clawtools/tools";
 
-const ct = createClawtools();
+const ct = await createClawtoolsAsync();
 
-console.log("tools:");
-for (const t of ct.tools.list()) console.log(t.id);
+// List all tools
+for (const meta of ct.tools.list()) {
+  console.log(`${meta.id} [${meta.sectionId}]: ${meta.description}`);
+}
 
-console.log("connectors:");
-for (const c of ct.connectors.list()) console.log(c.id);
+// Get executable tools for a context
+const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
+
+// Stream a response
+const connector = ct.connectors.getByProvider("anthropic");
+const model = connector.models.find(m => m.id === "claude-opus-4-6");
+
+for await (const event of connector.stream(model, {
+  systemPrompt: "You are a helpful assistant.",
+  messages: [{ role: "user", content: "Hello!" }],
+  tools: extractToolSchemas(tools),
+}, { apiKey: process.env.ANTHROPIC_API_KEY })) {
+  if (event.type === "text_delta") process.stdout.write(event.delta);
+}
 ```
 
-From there you can resolve tools, register custom tools/connectors, or load plugins.
+> See the [documentation](docs/usage/) and the `examples/` directory for more — tool profiles, custom tool authoring, plugin loading, connector authoring, and more.
 
-> See the [documentation](docs/usage.md) and the `examples/` directory for fuller
-> quick‑starts (OpenAI connector, plugin loader, tool runner, etc.).
+## Package entry points
 
+```
+clawtools            → createClawtools, createClawtoolsAsync, all registries and types
+clawtools/tools      → ToolRegistry, discovery, result helpers, param readers, schema utils
+clawtools/connectors → ConnectorRegistry, resolveAuth, discoverExtensions, builtins
+clawtools/plugins    → loadPlugins
+```
 
 ## Features
 
 ### Tool System
-- **23 core tools** via lazy factories from the openclaw submodule
-- Custom tool registration with direct and factory patterns
-- Parameter helpers with snake_case fallback and type coercion
-- Result helpers: `jsonResult`, `textResult`, `errorResult`, `imageResult`
-- JSON Schema extraction with Gemini sanitizer
-- `ToolContext` interface compatible with OpenClaw plugins
+- **25 core tools** compiled directly from the OpenClaw submodule: filesystem (`read`, `write`, `edit`), runtime (`exec`), web (`web_search`, `web_fetch`), memory, sessions, browser, canvas, messaging, automation, media, and more
+- Sync (`createClawtools`) and async (`createClawtoolsAsync`) entry points — sync for catalog/metadata, async for executable tools backed by pre-built ESM bundles
+- Filter tools by **profile** (`minimal`, `coding`, `messaging`, `full`) or **group** (`group:fs`, `group:web`, …)
+- Custom tool registration: direct `Tool` objects or lazy `ToolFactory` functions
+- Parameter helpers with camelCase/snake_case fallback, type coercion, and `ToolInputError` / `ToolAuthorizationError`
+- Result builders: `jsonResult`, `textResult`, `errorResult`, `imageResult`
+- JSON Schema extraction with Gemini keyword sanitizer
 
 ### Connector System
-- `ConnectorRegistry` compatible with OpenClaw's `registerApiProvider`
-- Discovers 36+ extensions by scanning `openclaw/extensions/` manifests
-- Auth resolution from explicit keys, environment variables, and naming conventions (`<PROVIDER>_API_KEY`)
-- Streaming interface (`AsyncIterable<StreamEvent>`) compatible with OpenClaw's API
-- `ModelDescriptor` as a typed, compatible subset of `ModelDefinitionConfig`
+- Built-in connectors for every provider in the `@mariozechner/pi-ai` catalog (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtoolsAsync`
+- `ConnectorRegistry` with lookup by ID, provider name, or API transport
+- Uniform `AsyncIterable<StreamEvent>` streaming interface across all providers
+- Auth resolution from explicit keys, environment variables, and `<PROVIDER>_API_KEY` conventions
+- Extension discovery: scans `openclaw/extensions/` manifests for channel and provider plugins
 
 ### Plugin System
-- Load any OpenClaw plugin package via `loadPlugins()`
-- Supports `openclaw.plugin.json` manifests and conventional entry points
-- Both `register` and `activate` export patterns
-- Enable/disable filtering via `PluginLoaderOptions`
-- Collects tools and connectors from loaded plugins
+- Load any OpenClaw-compatible plugin package via `loadPlugins()`
+- `openclaw.plugin.json` manifests with enable/disable filtering
+- Both `register` and `activate` export patterns supported
+- Collects `Tool[]`, `ToolFactory[]`, and `Connector[]` from loaded plugins
+- 10 OpenClaw-only registration methods (hooks, channels, gateway, CLI, …) are **accepted as no-ops** so plugins load cleanly without errors
 
 ## Limitations
 
@@ -82,29 +103,30 @@ clawtools is a compatibility adapter, not a runtime. The following OpenClaw feat
 - Requires pre-compiled JS — no jiti/TypeScript dynamic imports
 
 **OpenClaw-only infrastructure (not exposed)**
-- Hook system (26 lifecycle hooks), channel adapters (16 types), gateway RPC server
+- Hook system, channel adapters, gateway RPC server
 - Session persistence, agent loop, LLM streaming runtime
 - Docker/browser sandbox, image sanitization pipeline
 - Full `OpenClawConfig` system, multi-node clustering
 
-> Plugin calls to `registerHook`, `registerHttpHandler`, `registerHttpRoute`, `registerChannel`, `registerGatewayMethod`, `registerCli`, `registerService`, `registerProvider`, `registerCommand`, and `on` are **accepted but silently discarded**. Plugins load without errors, but these registrations have no effect.
+> Plugin calls to `registerHook`, `registerHttpHandler`, `registerHttpRoute`, `registerChannel`, `registerGatewayMethod`, `registerCli`, `registerService`, `registerProvider`, `registerCommand`, and `on` are **accepted but silently discarded**. Plugins load without errors; these registrations have no effect.
 
 ## Architecture
 
 ```
 clawtools/
 ├── src/
-│   ├── index.ts            # Main entry + createClawtools()
-│   ├── types.ts            # All type definitions
+│   ├── index.ts            # createClawtools, createClawtoolsAsync, re-exports
+│   ├── types.ts            # All type definitions (standalone, no openclaw dependency)
 │   ├── tools/
 │   │   ├── registry.ts     # ToolRegistry class
-│   │   ├── discovery.ts    # Core tool discovery from openclaw
-│   │   ├── helpers.ts      # jsonResult, textResult, errorResult
+│   │   ├── discovery.ts    # Core tool discovery — bundles or source fallback
+│   │   ├── helpers.ts      # jsonResult, textResult, errorResult, imageResult
 │   │   ├── params.ts       # Parameter reading utilities
-│   │   └── schema.ts       # JSON Schema extraction/normalization
+│   │   └── schema.ts       # JSON Schema extraction/normalization/Gemini cleaning
 │   ├── connectors/
-│   │   ├── registry.ts     # ConnectorRegistry class
-│   │   └── discovery.ts    # Extension discovery from openclaw
+│   │   ├── registry.ts     # ConnectorRegistry class + resolveAuth
+│   │   ├── discovery.ts    # Extension discovery + built-in connector loader
+│   │   └── pi-ai-bridge.ts # Adapts @mariozechner/pi-ai providers → Connector (bundled)
 │   └── plugins/
 │       └── loader.ts       # OpenClaw-compatible plugin loader
 └── openclaw/               # Git submodule (read-only)
@@ -112,12 +134,12 @@ clawtools/
 
 ### Design Principles
 
-1. **100% source compatibility** — clawtools builds directly from the OpenClaw git submodule. Every tool factory, connector, and plugin interface is compiled from the actual upstream source — not copies. This guarantees zero version drift.
-2. **Read-only submodule** — The `openclaw/` directory is never modified. Only tool/connector implementations are deep-linked from it.
+1. **100% source compatibility** — Every tool factory, connector, and plugin interface is compiled from the actual OpenClaw upstream source. Zero version drift by construction.
+2. **Read-only submodule** — The `openclaw/` directory is never modified. Tool and connector implementations are deep-linked from it at build time into standalone ESM bundles.
 3. **No domain logic** — This library is a compatibility layer; it adds no features specific to any single tool.
-4. **Fully typed** — All types are reimplemented standalone (no dependency on openclaw's type system).
-5. **Modular** — Import only what you need via subpath exports.
-6. **Extensible** — Register custom tools, connectors, and plugins alongside openclaw's built-ins.
+4. **Fully typed** — All types are reimplemented standalone with no runtime dependency on the openclaw package.
+5. **Modular** — Import only what you need via subpath exports (`clawtools/tools`, `clawtools/connectors`, `clawtools/plugins`).
+6. **Extensible** — Register custom tools, connectors, and plugins alongside OpenClaw's built-ins.
 
 ## License
 
