@@ -95,5 +95,17 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "peerDependencies": {
+    "@lydell/node-pty": "*",
+    "koffi": "*",
+    "node-llama-cpp": "*",
+    "sharp": "*"
+  },
+  "peerDependenciesMeta": {
+    "@lydell/node-pty": { "optional": true },
+    "koffi": { "optional": true },
+    "node-llama-cpp": { "optional": true },
+    "sharp": { "optional": true }
   }
 }
