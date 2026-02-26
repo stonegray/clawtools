@@ -11,6 +11,7 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import type { Connector } from "../types.js";
 import type { PluginManifest } from "../plugins/loader.js";
 
 // =============================================================================
@@ -175,4 +176,75 @@ function resolveExtensionEntry(extDir: string): string | null {
     }
 
     return null;
+}
+
+// =============================================================================
+// Built-in connector discovery
+// =============================================================================
+
+/**
+ * Resolve the path to the pre-built connector bundle.
+ *
+ * At runtime this file lives at `dist/connectors/discovery.js`, so the
+ * connector bundle is at `../core-connectors/builtins.js`.
+ */
+function resolveConnectorBundle(): string {
+    // From dist/connectors/discovery.js → ../core-connectors/builtins.js
+    const distDir = resolve(new URL(".", import.meta.url).pathname, "..");
+    return join(distDir, "core-connectors", "builtins.js");
+}
+
+/**
+ * Discover and return all built-in LLM connectors.
+ *
+ * Built-in connectors are backed by `@mariozechner/pi-ai` provider
+ * implementations, bundled at build time into `dist/core-connectors/builtins.js`.
+ * One connector is returned per pi-ai provider (anthropic, openai, google, …).
+ *
+ * ## Loading strategy
+ *
+ * 1. **Bundled** (preferred): Loads `dist/core-connectors/builtins.js` — a
+ *    self-contained ESM bundle compiled from `src/connectors/pi-ai-bridge.ts`.
+ *    Works in any Node 18+ environment; requires `npm run build` to have run.
+ * 2. **Source fallback** (development / vitest): If the bundle is absent, falls
+ *    back to importing `src/connectors/pi-ai-bridge.ts` directly. Requires a
+ *    TypeScript-capable runtime (vitest, tsx, ts-node).
+ *
+ * @returns Array of fully executable `Connector` objects, or an empty array if
+ *          the connector bundle is not available.
+ */
+export async function discoverBuiltinConnectorsAsync(): Promise<Connector[]> {
+    // Try bundled output first
+    const bundlePath = resolveConnectorBundle();
+    if (existsSync(bundlePath)) {
+        try {
+            const { pathToFileURL } = await import("node:url");
+            const mod = await import(pathToFileURL(bundlePath).href) as {
+                getBuiltinConnectors?: () => Connector[];
+            };
+            if (typeof mod.getBuiltinConnectors === "function") {
+                return mod.getBuiltinConnectors();
+            }
+        } catch (err) {
+            // Bundle failed to load — fall through to source fallback
+            console.warn("[clawtools] Failed to load connector bundle:", err);
+        }
+    }
+
+    // Source fallback: import from the TypeScript source (dev / vitest)
+    try {
+        // Resolve relative to this *source* file (src/connectors/discovery.ts)
+        // The import below is a string literal so bundlers/tsc don't follow it.
+        const srcPath = new URL("./pi-ai-bridge.js", import.meta.url).href;
+        const mod = await import(srcPath) as {
+            getBuiltinConnectors?: () => Connector[];
+        };
+        if (typeof mod.getBuiltinConnectors === "function") {
+            return mod.getBuiltinConnectors();
+        }
+    } catch {
+        // Source not available — return empty
+    }
+
+    return [];
 }

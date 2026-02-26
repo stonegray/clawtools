@@ -114,6 +114,7 @@ export {
     ConnectorRegistry,
     resolveAuth,
     discoverExtensions,
+    discoverBuiltinConnectorsAsync,
     getExtensionPath,
     listChannelExtensions,
     listProviderExtensions,
@@ -140,6 +141,7 @@ import { ConnectorRegistry } from "./connectors/registry.js";
 import { discoverCoreTools, discoverCoreToolsAsync, type DiscoveryOptions } from "./tools/discovery.js";
 import {
     discoverExtensions,
+    discoverBuiltinConnectorsAsync,
     type ExtensionInfo,
 } from "./connectors/discovery.js";
 
@@ -168,6 +170,17 @@ export interface ClawtoolsOptions {
      * Useful when you only want custom tools.
      */
     skipCoreTools?: boolean;
+
+    /**
+     * If true, skip auto-registration of built-in LLM provider connectors.
+     *
+     * By default, `createClawtoolsAsync()` registers connectors for every
+     * provider in the `@mariozechner/pi-ai` catalog (anthropic, openai,
+     * google, amazon-bedrock, …). Set this flag to manage connectors manually.
+     *
+     * Has no effect on `createClawtools()` (sync), which never loads connectors.
+     */
+    skipBuiltinConnectors?: boolean;
 }
 
 /**
@@ -261,6 +274,13 @@ export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<
             openclawRoot: options?.openclawRoot,
             ...options?.tools,
         });
+    }
+
+    if (!options?.skipBuiltinConnectors) {
+        const builtins = await discoverBuiltinConnectorsAsync();
+        for (const connector of builtins) {
+            connectorRegistry.register(connector);
+        }
     }
 
     const extensions = discoverExtensions(options?.extensionsDir);
