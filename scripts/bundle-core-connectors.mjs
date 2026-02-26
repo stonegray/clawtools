@@ -41,13 +41,24 @@ const NODE_BUILTINS = new Set([
     "worker_threads", "zlib",
 ]);
 
-// Packages that contain native (.node) addons or cannot be bundled.
-// They are marked external — callers that need them must install them separately.
+// Packages that contain native (.node) addons, are real runtime dependencies
+// (and therefore already available to the consumer), or cannot be bundled.
+// They are marked external — callers must install them separately.
 const ALWAYS_EXTERNAL = new Set([
+    // Native addons
     "koffi",
     "@lydell/node-pty",
     "sharp",
     "node-llama-cpp",
+    // Real runtime dependencies listed in package.json#dependencies —
+    // externalising avoids duplicating these in the bundle and lets the
+    // consumer share a single install.
+    // NOTE: undici also transitively removes ~1.5 MB of AST tooling
+    // (quickjs-emscripten, esprima, ast-types, escodegen) pulled in via
+    // pac-resolver → degenerator.
+    "undici",
+    "@sinclair/typebox",
+    "ajv",
 ]);
 
 // ─── esbuild plugin ───────────────────────────────────────────────────────────

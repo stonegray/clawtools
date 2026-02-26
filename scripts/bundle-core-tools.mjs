@@ -57,12 +57,18 @@ export const TOOL_CATALOG = [
 // ─── Packages that can never be bundled ──────────────────────────────────────
 
 export const ALWAYS_EXTERNAL = new Set([
+    // Native addons / platform-specific
     "sharp",
     "node-llama-cpp",
     "koffi",
     "@lydell/node-pty",
     "@mariozechner/clipboard-linux-x64-gnu",
-    "undici",    // Bundled with Node 18+ — keep external to avoid interop issues
+    // Real runtime dependencies — consumers have these installed via
+    // package.json#dependencies, so we keep them external to avoid
+    // duplicating them in the bundle and to allow version sharing.
+    "undici",
+    "@sinclair/typebox",
+    "ajv",
 ]);
 
 export const NODE_BUILTINS = new Set([

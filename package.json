@@ -66,6 +66,8 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@sinclair/typebox": "^0.34.48",
+    "ajv": "^8.18.0",
     "undici": "^7.22.0"
   },
   "devDependencies": {
@@ -73,10 +75,8 @@
     "@mariozechner/pi-agent-core": "^0.55.0",
     "@mariozechner/pi-ai": "^0.55.1",
     "@mariozechner/pi-coding-agent": "^0.55.0",
-    "@sinclair/typebox": "^0.34.48",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^3.0.0",
-    "ajv": "^8.18.0",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "croner": "^10.0.1",
