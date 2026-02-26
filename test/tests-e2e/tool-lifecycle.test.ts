@@ -302,7 +302,7 @@ describe("schema extraction e2e", () => {
 // Core tool discovery e2e (async — loads real bundles)
 // ---------------------------------------------------------------------------
 
-describe("core tool discovery e2e", { timeout: 60_000 }, () => {
+describe("core tool discovery e2e", { timeout: 180_000 }, () => {
     it("createClawtoolsAsync discovers 23 core tools", async () => {
         const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
         expect(ct.tools.size).toBe(23);

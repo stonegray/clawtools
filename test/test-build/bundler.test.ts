@@ -407,7 +407,7 @@ describe.skipIf(!BUNDLES_BUILT)("4. Bundle loading", () => {
                 import(pathToFileURL(join(ROOT, "dist", e.bundle.replace(/^\.\//, ""))).href),
             ),
         );
-    }, 60_000); // 60 s — allows up to ~15 s per bundle for slow machines
+    }, 180_000); // 180 s — bundles JIT-compile in parallel; real first-load ~90 s
 
     it("manifest.json is valid JSON with the expected per-tool structure", () => {
         expect(typeof manifest).toBe("object");

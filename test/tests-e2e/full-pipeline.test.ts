@@ -188,7 +188,7 @@ describe("schema extraction in pipeline", () => {
 // createClawtoolsAsync full integration
 // ---------------------------------------------------------------------------
 
-describe("createClawtoolsAsync integration", { timeout: 60_000 }, () => {
+describe("createClawtoolsAsync integration", { timeout: 180_000 }, () => {
     it("loads core tools, adds custom connector, and streams through mock", async () => {
         const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
 
