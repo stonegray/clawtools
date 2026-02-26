@@ -56,3 +56,6 @@ for await (const event of connector.stream(model, {
   if (event.type === "text_delta") process.stdout.write(event.delta);
 }
 ```
+
+> **This project was created entirely using AI.** Zero lines of code were written by a human. Models used during development include Opus 4.5, Opus 4.6, Raptor Mini, GPT 5.2, and Sonnet 3.6.
+
