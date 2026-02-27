@@ -44,6 +44,9 @@ jobs:
       - name: TypeScript — check test/
         run: npx tsc --project tsconfig.test.json --noEmit
 
+      - name: ESLint
+        run: npm run lint
+
   # ---------------------------------------------------------------------------
   # 2. Tests with coverage (matrix across Node LTS versions)
   # ---------------------------------------------------------------------------

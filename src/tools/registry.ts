@@ -222,7 +222,8 @@ export class ToolRegistry {
             if (!sectionMap.has(sId)) {
                 sectionMap.set(sId, []);
             }
-            sectionMap.get(sId)!.push(entry.meta);
+            // sectionMap.get is guaranteed non-null here: set unconditionally above
+            (sectionMap.get(sId) ?? []).push(entry.meta);
         }
 
         return Array.from(sectionMap.entries(), ([id, tools]) => ({

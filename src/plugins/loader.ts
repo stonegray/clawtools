@@ -12,12 +12,11 @@
  * @module
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type {
     Connector,
     PluginApi,
-    PluginDefinition,
     Tool,
     ToolFactory,
 } from "../types.js";
@@ -223,12 +222,12 @@ async function loadSinglePlugin(
         registerTool(toolOrFactory, opts) {
             if (typeof toolOrFactory === "function") {
                 toolFactories.push({
-                    factory: toolOrFactory as ToolFactory,
+                    factory: toolOrFactory,
                     names: opts?.names ?? (opts?.name ? [opts.name] : undefined),
                     optional: opts?.optional,
                 });
             } else {
-                tools.push(toolOrFactory as Tool);
+                tools.push(toolOrFactory);
             }
         },
 

@@ -153,7 +153,7 @@ describe("Schema utilities", () => {
                     },
                 },
             };
-            const cleaned = cleanSchemaForGemini(s) as Record<string, unknown>;
+            const cleaned = cleanSchemaForGemini(s);
             const childProp = (cleaned.properties as Record<string, unknown>).child as Record<
                 string,
                 unknown
@@ -173,7 +173,7 @@ describe("Schema utilities", () => {
                     },
                 },
             };
-            const cleaned = cleanSchemaForGemini(s) as Record<string, unknown>;
+            const cleaned = cleanSchemaForGemini(s);
             const tagProp = (cleaned.properties as Record<string, unknown>).tags as Record<
                 string,
                 unknown

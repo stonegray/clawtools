@@ -473,7 +473,7 @@ export function getCoreSections(): ToolSection[] {
  * Return the full core tool catalog metadata (without loading any implementations).
  */
 export function getCoreToolCatalog(): ToolMeta[] {
-    return CORE_TOOL_CATALOG.map(({ factoryModule, factoryName, ...meta }) => meta);
+    return CORE_TOOL_CATALOG.map(({ factoryModule: _factoryModule, factoryName: _factoryName, ...meta }) => meta);
 }
 
 /**

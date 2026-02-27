@@ -11,8 +11,6 @@
 import type {
     Api,
     Connector,
-    ModelDescriptor,
-    ProviderConfig,
     ResolvedAuth,
 } from "../types.js";
 
