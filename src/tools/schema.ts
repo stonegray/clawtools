@@ -121,7 +121,7 @@ function deepClean(
  * @param providerOrApi - Optional provider name **or** API transport string for
  *   provider-specific schema cleaning. Accepts either `connector.provider`
  *   (e.g. `"google"`) or `connector.api` (e.g. `"google-generative-ai"`,
- *   `"google-vertex"`). When either matches a known Google transport, Gemini-
+ *   `"google-gemini-cli"`, `"google-vertex"`). When either matches a known Google transport, Gemini-
  *   incompatible JSON Schema keywords are stripped from the schemas.
  * @returns Array of tool schema objects.
  */
@@ -135,6 +135,7 @@ export function extractToolSchemas(
             providerOrApi &&
             (providerOrApi === "google" ||
                 providerOrApi === "google-generative-ai" ||
+                providerOrApi === "google-gemini-cli" ||
                 providerOrApi === "google-vertex")
         ) {
             return {
