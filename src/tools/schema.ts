@@ -118,20 +118,24 @@ function deepClean(
  * Extract tool schemas from an array of tools, ready for LLM submission.
  *
  * @param tools - Array of tools.
- * @param provider - Optional provider name for provider-specific cleaning.
+ * @param providerOrApi - Optional provider name **or** API transport string for
+ *   provider-specific schema cleaning. Accepts either `connector.provider`
+ *   (e.g. `"google"`) or `connector.api` (e.g. `"google-generative-ai"`,
+ *   `"google-vertex"`). When either matches a known Google transport, Gemini-
+ *   incompatible JSON Schema keywords are stripped from the schemas.
  * @returns Array of tool schema objects.
  */
 export function extractToolSchemas(
     tools: Tool[],
-    provider?: string,
+    providerOrApi?: string,
 ): Array<{ name: string; description: string; input_schema: unknown }> {
     return tools.map((tool) => {
         const schema = extractToolSchema(tool);
         if (
-            provider &&
-            (provider === "google" ||
-                provider === "google-generative-ai" ||
-                provider === "google-vertex")
+            providerOrApi &&
+            (providerOrApi === "google" ||
+                providerOrApi === "google-generative-ai" ||
+                providerOrApi === "google-vertex")
         ) {
             return {
                 ...schema,
