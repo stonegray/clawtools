@@ -71,6 +71,25 @@ export class ConnectorRegistry {
      * @param connector - The connector to register.
      */
     register(connector: Connector): void {
+        // Clean up stale index entries if overwriting an existing connector
+        const existing = this.connectors.get(connector.id);
+        if (existing) {
+            // Remove stale providerIndex entry for the old provider name
+            if (this.providerIndex.get(existing.provider) === connector.id) {
+                this.providerIndex.delete(existing.provider);
+            }
+            // Remove stale apiIndex entry for the old api transport
+            const oldApiList = this.apiIndex.get(existing.api);
+            if (oldApiList) {
+                const filtered = oldApiList.filter((x) => x !== connector.id);
+                if (filtered.length > 0) {
+                    this.apiIndex.set(existing.api, filtered);
+                } else {
+                    this.apiIndex.delete(existing.api);
+                }
+            }
+        }
+
         this.connectors.set(connector.id, connector);
         this.providerIndex.set(connector.provider, connector.id);
 
