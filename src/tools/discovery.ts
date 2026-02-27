@@ -495,7 +495,6 @@ export function discoverCoreTools(
     registry: ToolRegistry,
     options?: DiscoveryOptions,
 ): void {
-    const { root } = resolveOpenclawRoot(options?.openclawRoot);
     const includeSet = options?.include ? expandGroups(options.include) : null;
     const excludeSet = options?.exclude ? expandGroups(options.exclude) : new Set<string>();
 
@@ -504,62 +503,24 @@ export function discoverCoreTools(
         if (includeSet && !includeSet.has(entry.id)) continue;
         if (excludeSet.has(entry.id)) continue;
 
-        const { factoryModule, factoryName, ...meta } = entry;
-        const modulePath = toolModulePath(root, factoryModule);
+        const { factoryModule: _factoryModule, factoryName: _factoryName, ...meta } = entry;
 
-        // Register as a factory for lazy loading
-        registry.registerFactory(
-            createLazyToolFactory(modulePath, factoryName),
-            meta,
-        );
+        // Sync discovery only registers catalog metadata; factories always return null
+        // because ESM dynamic import is async. Use discoverCoreToolsAsync() to get
+        // executable tools.
+        registry.registerFactory(() => null, meta);
     }
 }
 
-/**
- * Create a lazy factory that loads a tool from the openclaw submodule on demand.
- *
- * The factory uses dynamic import to load the module only when the tool
- * is actually requested.
- */
-function createLazyToolFactory(
-    modulePath: string,
-    exportName: string,
-): (ctx: ToolContext) => Tool | Tool[] | null | undefined {
-    return (ctx: ToolContext) => {
-        // Note: This is a synchronous wrapper around what would ideally be async.
-        // In practice, the tools are created synchronously by OpenClaw's factory
-        // functions — they return tool objects, not promises.
-        // For truly async loading, see the async resolution helpers below.
-        try {
-            // We use a dynamic import cache approach
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const mod = requireModule(modulePath);
-            const factory = mod[exportName];
-            if (typeof factory !== "function") return null;
-            return factory(ctx);
-        } catch {
-            // If the module can't be loaded (missing deps, etc.), skip silently
-            return null;
-        }
-    };
-}
+// =============================================================================
+// Module cache (shared between sync stub and async source-fallback paths)
+// =============================================================================
 
 /**
- * Simple module cache for synchronous requires.
- * Falls back gracefully when modules can't be loaded.
+ * Module cache populated by discoverFromSource for synchronous access inside
+ * the bundled tool factories registered during async discovery.
  */
 const moduleCache = new Map<string, Record<string, unknown>>();
-
-function requireModule(modulePath: string): Record<string, unknown> {
-    const cached = moduleCache.get(modulePath);
-    if (cached) return cached;
-
-    // In ESM we can't use require, but we can cache dynamic imports
-    // This throws if called synchronously — callers should handle errors
-    throw new Error(
-        `Module ${modulePath} not pre-loaded. Use discoverCoreToolsAsync() for async loading.`,
-    );
-}
 
 /**
  * Async version of tool discovery that properly handles ESM dynamic imports.
@@ -720,7 +681,17 @@ async function discoverFromSource(
         }
 
         registry.registerFactory(
-            createLazyToolFactory(modulePath, factoryName),
+            (ctx: ToolContext) => {
+                const mod = moduleCache.get(modulePath);
+                if (!mod) return null;
+                const factory = mod[factoryName];
+                if (typeof factory !== "function") return null;
+                try {
+                    return factory(ctx) as Tool | Tool[] | null;
+                } catch {
+                    return null;
+                }
+            },
             meta,
         );
     }
