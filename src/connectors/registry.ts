@@ -58,6 +58,16 @@ export class ConnectorRegistry {
     /**
      * Register a connector.
      *
+     * The connector's `id` is the primary key — registering a second connector
+     * with the same `id` silently replaces the first.
+     *
+     * **Provider index (last-write-wins):** `connector.provider` is also indexed
+     * for {@link getByProvider} lookups. If two connectors share the same
+     * `provider` string (e.g., both declare `provider: "openai"`), the second
+     * call to `register()` wins: `getByProvider("openai")` will return the
+     * most-recently-registered connector. The earlier connector remains
+     * accessible via its `id` through {@link get}.
+     *
      * @param connector - The connector to register.
      */
     register(connector: Connector): void {
