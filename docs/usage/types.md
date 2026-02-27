@@ -83,10 +83,62 @@ interface ToolContext {
   messageChannel?: string;
   agentAccountId?: string;
   sandboxed?: boolean;
+  /** Absolute path to the project root; required by read/write/edit tools. */
+  root?: string;
+  /** Filesystem bridge; required by read/write/edit tools. Use `createNodeBridge(root)` for local Node.js access. */
+  bridge?: FsBridge;
 }
 ```
 
+> `root` and `bridge` must be supplied together. If either is missing, filesystem tools will be silently skipped by `resolveAll()`. Use `createNodeBridge(root)` (exported from `clawtools` and `clawtools/tools`) to obtain a local Node.js-backed bridge.
+
 ---
+
+## Filesystem bridge types
+
+### `FsStat`
+```ts
+interface FsStat {
+  isFile: boolean;
+  isDirectory: boolean;
+  size: number;
+  mtimeMs: number;
+}
+```
+Metadata returned by `FsBridge.stat()`.
+
+### `FsBridge`
+```ts
+interface FsBridge {
+  /** Read a file as a UTF-8 string. */
+  readFile(path: string): Promise<string>;
+  /** Write (overwrite) a file. Parent directories are created if needed. */
+  writeFile(path: string, content: string): Promise<void>;
+  /** Stat a path; returns `null` if the path does not exist. */
+  stat(path: string): Promise<FsStat | null>;
+  /** List directory entries. Each entry is a name with a trailing `/` if it is a directory. */
+  readdir(path: string): Promise<string[]>;
+  /** Remove a file. */
+  unlink(path: string): Promise<void>;
+  /** Create a directory and all parent directories. */
+  mkdir(path: string): Promise<void>;
+}
+```
+
+Implement this interface to plug any filesystem backend into the `read`/`write`/`edit` tools:
+
+```ts
+import { createNodeBridge } from "clawtools";
+
+// Local Node.js bridge — paths are resolved relative to root
+const bridge = createNodeBridge("/my/project");
+
+const tools = ct.tools.resolveAll({
+  workspaceDir: "/my/project",
+  root: "/my/project",
+  bridge,
+});
+```
 
 ## Tool catalog types
 
@@ -209,16 +261,46 @@ interface ResolvedAuth {
 
 ---
 
+## Message types
+
+See [messages.md](./messages.md) for a full explanation of the conversation format, common mistakes, and a turn-by-turn flow diagram.
+
+### `UserMessage`
+```ts
+interface UserMessage {
+  role: "user";
+  content: string;
+}
+```
+
+### `AssistantMessage`
+```ts
+interface AssistantMessage {
+  role: "assistant";
+  content: string;
+}
+```
+
+### `ConversationMessage`
+```ts
+type ConversationMessage = UserMessage | AssistantMessage;
+```
+A discriminated union of the two user-facing message types. For tool results use the internal `ToolResultMessage` format — see [messages.md](./messages.md).
+
+---
+
 ## Stream event types
 
 ### `StreamContext`
 ```ts
 interface StreamContext {
   systemPrompt?: string;
-  messages: Array<Record<string, unknown>>;
+  messages: Array<UserMessage | AssistantMessage>;
   tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 ```
+
+> Build the `messages` array with `UserMessage` and `AssistantMessage` objects. When feeding tool results back into the conversation, use the internal `ToolResultMessage` format — see [messages.md](./messages.md) for the full protocol.
 
 ### `StreamOptions`
 ```ts

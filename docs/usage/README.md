@@ -36,35 +36,44 @@ clawtools/plugins  → loadPlugins
 | [tools.md](./tools.md) | `ToolRegistry` full API, discovery, core tool catalog, profiles, tool groups |
 | [tool-helpers.md](./tool-helpers.md) | Result builders, parameter readers, schema utilities, error classes |
 | [connectors.md](./connectors.md) | `ConnectorRegistry`, `resolveAuth`, built-in connectors, streaming |
+| [messages.md](./messages.md) | **Message format** — `UserMessage`, `AssistantMessage`, `ToolResultMessage`, conversation history |
 | [plugins.md](./plugins.md) | `loadPlugins`, `PluginDefinition`, `PluginApi`, authoring plugins |
 | [types.md](./types.md) | Complete exported type reference |
 
 ## Minimal quick-start
 
 ```ts
-import { createClawtoolsAsync } from "clawtools";
+import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+import { extractToolSchemas } from "clawtools/tools";
 
 const ct = await createClawtoolsAsync();
+const root = process.cwd();
 
 // List all tools
 for (const meta of ct.tools.list()) {
   console.log(`${meta.id} [${meta.sectionId}]: ${meta.description}`);
 }
 
-// Get executable tools for a context
-const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
+// Get executable tools — include root + bridge for read/write/edit tools
+const tools = ct.tools.resolveAll({
+  workspaceDir: root,
+  root,
+  bridge: createNodeBridge(root),
+});
 
 // Stream a response
 const connector = ct.connectors.getByProvider("anthropic");
-const model = connector.models.find(m => m.id === "claude-opus-4-6");
+const model = connector.models!.find(m => m.id === "claude-opus-4-6")!;
 for await (const event of connector.stream(model, {
   systemPrompt: "You are a helpful assistant.",
   messages: [{ role: "user", content: "Hello!" }],
-  tools: tools.map(t => ({ name: t.name, description: t.description, input_schema: t.parameters })),
+  tools: extractToolSchemas(tools),
 }, { apiKey: process.env.ANTHROPIC_API_KEY })) {
   if (event.type === "text_delta") process.stdout.write(event.delta);
 }
 ```
+
+> For a complete agentic loop with tool call handling, see [`examples/agentic/`](../../examples/agentic/) and [`messages.md`](./messages.md).
 
 > **This project was created entirely using AI.** Zero lines of code were written by a human. Models used during development include Opus 4.5, Opus 4.6, Raptor Mini, GPT 5.2, and Sonnet 3.6.
 

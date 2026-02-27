@@ -20,22 +20,22 @@ Requires **Node.js ≥ 20**.
 ## Quick Start
 
 ```typescript
-import { createClawtoolsAsync } from "clawtools";
+import { createClawtoolsAsync, createNodeBridge } from "clawtools";
 import { extractToolSchemas } from "clawtools/tools";
 
 const ct = await createClawtoolsAsync();
+const root = process.cwd();
 
-// List all tools
-for (const meta of ct.tools.list()) {
-  console.log(`${meta.id} [${meta.sectionId}]: ${meta.description}`);
-}
+// Resolve tools — include root + bridge to enable read/write/edit
+const tools = ct.tools.resolveAll({
+  workspaceDir: root,
+  root,
+  bridge: createNodeBridge(root),
+});
 
-// Get executable tools for a context
-const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
-
-// Stream a response
+// Stream a response with tool use
 const connector = ct.connectors.getByProvider("anthropic");
-const model = connector.models.find(m => m.id === "claude-opus-4-6");
+const model = connector.models!.find(m => m.id === "claude-opus-4-6")!;
 
 for await (const event of connector.stream(model, {
   systemPrompt: "You are a helpful assistant.",
@@ -46,7 +46,8 @@ for await (const event of connector.stream(model, {
 }
 ```
 
-> See the [documentation](docs/usage/) and the `examples/` directory for more — tool profiles, custom tool authoring, plugin loading, connector authoring, and more.
+> For a complete agentic loop (stream → handle tool calls → feed results back → repeat), see
+> [`examples/agentic/`](examples/agentic/) and [`docs/usage/messages.md`](docs/usage/messages.md).
 
 ## Package entry points
 
@@ -62,6 +63,7 @@ clawtools/plugins    → loadPlugins
 ### Tool System
 - **25 core tools** compiled directly from the OpenClaw submodule: filesystem (`read`, `write`, `edit`), runtime (`exec`), web (`web_search`, `web_fetch`), memory, sessions, browser, canvas, messaging, automation, media, and more
 - Sync (`createClawtools`) and async (`createClawtoolsAsync`) entry points — sync for catalog/metadata, async for executable tools backed by pre-built ESM bundles
+- **`FsBridge` interface + `createNodeBridge(root)`** — plug any filesystem backend (local Node.js, sandboxed container, virtual FS) into the `read`/`write`/`edit` tools; `createNodeBridge` is the ready-to-use Node.js implementation
 - Filter tools by **profile** (`minimal`, `coding`, `messaging`, `full`) or **group** (`group:fs`, `group:web`, …)
 - Custom tool registration: direct `Tool` objects or lazy `ToolFactory` functions
 - Parameter helpers with camelCase/snake_case fallback, type coercion, and `ToolInputError` / `ToolAuthorizationError`
@@ -72,7 +74,9 @@ clawtools/plugins    → loadPlugins
 - Built-in connectors for every provider in the `@mariozechner/pi-ai` catalog (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtoolsAsync`
 - `ConnectorRegistry` with lookup by ID, provider name, or API transport
 - Uniform `AsyncIterable<StreamEvent>` streaming interface across all providers
-- Auth resolution from explicit keys, environment variables, and `<PROVIDER>_API_KEY` conventions
+- **Typed conversation history** — `UserMessage`, `AssistantMessage`, `ConversationMessage` types; `StreamContext.messages` is fully typed
+- **Internal message format** — clawtools uses `role: "toolResult"` (not OpenAI's `role: "tool"` or Anthropic's nested `content` block); see [docs/usage/messages.md](docs/usage/messages.md)
+- Auth resolution from explicit keys, environment variables, and `<PROVIDER>_API_KEY` conventions; per-connector env var table in [docs/usage/connectors.md](docs/usage/connectors.md)
 - Extension discovery: scans `openclaw/extensions/` manifests for channel and provider plugins
 
 ### Plugin System
@@ -96,6 +100,7 @@ clawtools/
 │   ├── tools/
 │   │   ├── registry.ts     # ToolRegistry class
 │   │   ├── discovery.ts    # Core tool discovery — bundles or source fallback
+│   │   ├── node-bridge.ts  # createNodeBridge() — local Node.js FsBridge implementation
 │   │   ├── helpers.ts      # jsonResult, textResult, errorResult, imageResult
 │   │   ├── params.ts       # Parameter reading utilities
 │   │   └── schema.ts       # JSON Schema extraction/normalization/Gemini cleaning
@@ -105,7 +110,11 @@ clawtools/
 │   │   └── pi-ai-bridge.ts # Adapts @mariozechner/pi-ai providers → Connector (bundled)
 │   └── plugins/
 │       └── loader.ts       # OpenClaw-compatible plugin loader
-└── openclaw/               # Git submodule (read-only)
+├── examples/
+│   ├── agentic/        # Complete agentic loop: stream → tool use → feed back
+│   ├── tool/read-file/ # Call a tool directly, no LLM
+│   └── openai-connector/ # Custom connector example
+└── openclaw/           # Git submodule (read-only)
 ```
 
 ### Design Principles

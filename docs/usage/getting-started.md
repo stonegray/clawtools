@@ -6,7 +6,7 @@
 npm install clawtools
 ```
 
-Requires **Node.js ≥ 18**.
+Requires **Node.js ≥ 20**.
 
 ---
 
@@ -31,11 +31,16 @@ for (const meta of ct.tools.list()) {
 Awaits ESM dynamic imports for every core tool and (by default) all built-in LLM connectors. After awaiting, tools returned by `resolveAll()` have working `execute` methods and connectors have working `stream` methods.
 
 ```ts
-import { createClawtoolsAsync } from "clawtools";
+import { createClawtoolsAsync, createNodeBridge } from "clawtools";
 
 const ct = await createClawtoolsAsync();
+const root = process.cwd();
 
-const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
+const tools = ct.tools.resolveAll({
+  workspaceDir: root,
+  root,
+  bridge: createNodeBridge(root),
+});
 console.log(`${tools.length} executable tools available`);
 ```
 
@@ -122,6 +127,8 @@ Core tool execution depends on pre-built bundles:
 2. **Source fallback** (development): If no bundles exist but the openclaw git submodule is present, tools are loaded from `.ts` source files. Requires a TypeScript-capable runtime (vitest, tsx, ts-node, or Node 22+ with `--experimental-strip-types`).
 
 If neither is available, tool metadata is still registered (catalog works) but `execute` returns nothing. `DiscoveryOptions.onLoadWarning` receives a descriptive message when tools cannot load.
+
+> **Agentic loop?** See [`examples/agentic/`](../../examples/agentic/) for a complete stream → handle tool calls → feed results back → repeat loop, and [`docs/usage/messages.md`](./messages.md) for the message format you need to build the conversation history correctly.
 
 ---
 
