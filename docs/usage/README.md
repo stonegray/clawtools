@@ -10,6 +10,15 @@ clawtools wraps OpenClaw's tool and connector systems as a standalone NPM packag
 - Load OpenClaw-compatible plugins that register custom tools and connectors
 - Discover OpenClaw extensions (channel and provider plugins)
 
+## Reference pages
+
+- [Getting started](./getting-started.md)
+- [Tools](./tools.md) — registry, discovery, resolveAll, context requirements, FsBridge
+- [Connectors](./connectors.md) — streaming, StreamContext, connector auth table
+- [Messages](./messages.md) — **clawtools message format** (UserMessage / AssistantMessage / ToolResultMessage)
+- [Types](./types.md)
+- [Plugins](./plugins.md)
+
 ## Package entry points
 
 ```
