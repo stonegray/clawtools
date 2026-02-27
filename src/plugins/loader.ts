@@ -21,6 +21,7 @@ import type {
     Tool,
     ToolFactory,
 } from "../types.js";
+import { resolvePluginEntry } from "../shared/resolve-entry.js";
 
 // =============================================================================
 // Plugin Manifest
@@ -189,7 +190,7 @@ async function loadSinglePlugin(
     manifest: PluginManifest,
 ): Promise<LoadedPlugin | null> {
     // Resolve entry point
-    const entryPath = resolveEntryPoint(pluginDir);
+    const entryPath = resolvePluginEntry(pluginDir);
     if (!entryPath) return null;
 
     // Load module
@@ -262,40 +263,6 @@ async function loadSinglePlugin(
         toolFactories,
         connectors,
     };
-}
-
-function resolveEntryPoint(pluginDir: string): string | null {
-    // Check package.json for openclaw.extensions field
-    const pkgPath = join(pluginDir, "package.json");
-    if (existsSync(pkgPath)) {
-        try {
-            const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-            const extensions = pkg?.openclaw?.extensions;
-            if (Array.isArray(extensions) && extensions.length > 0) {
-                const resolved = join(pluginDir, extensions[0]);
-                if (existsSync(resolved)) return resolved;
-            }
-        } catch {
-            // Ignore parse errors
-        }
-    }
-
-    // Try conventional entry points
-    const candidates = [
-        "index.ts",
-        "index.js",
-        "src/index.ts",
-        "src/index.js",
-        "index.mts",
-        "index.mjs",
-    ];
-
-    for (const candidate of candidates) {
-        const fullPath = join(pluginDir, candidate);
-        if (existsSync(fullPath)) return fullPath;
-    }
-
-    return null;
 }
 
 function resolveRegisterFunction(

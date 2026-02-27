@@ -13,6 +13,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Connector } from "../types.js";
 import type { PluginManifest } from "../plugins/loader.js";
+import { resolvePluginEntry } from "../shared/resolve-entry.js";
 
 // =============================================================================
 // Extension Metadata
@@ -84,7 +85,7 @@ export function discoverExtensions(
                 if (!manifest.id) continue;
 
                 // Try to find the entry point
-                const entryPoint = resolveExtensionEntry(extDir);
+                const entryPoint = resolvePluginEntry(extDir);
 
                 results.push({
                     id: manifest.id,
@@ -141,41 +142,6 @@ export function listProviderExtensions(
     return discoverExtensions(extensionsDir)
         .filter((ext) => ext.providers.length > 0)
         .map((ext) => ext.id);
-}
-
-// =============================================================================
-// Internal
-// =============================================================================
-
-function resolveExtensionEntry(extDir: string): string | null {
-    // Check package.json for openclaw.extensions
-    const pkgPath = join(extDir, "package.json");
-    if (existsSync(pkgPath)) {
-        try {
-            const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-            const extensions = pkg?.openclaw?.extensions;
-            if (Array.isArray(extensions) && extensions.length > 0) {
-                const resolved = join(extDir, extensions[0]);
-                if (existsSync(resolved)) return resolved;
-            }
-        } catch {
-            // Ignore
-        }
-    }
-
-    const candidates = [
-        "index.ts",
-        "index.js",
-        "src/index.ts",
-        "src/index.js",
-    ];
-
-    for (const candidate of candidates) {
-        const fullPath = join(extDir, candidate);
-        if (existsSync(fullPath)) return fullPath;
-    }
-
-    return null;
 }
 
 // =============================================================================
