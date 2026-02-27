@@ -165,8 +165,24 @@ export interface FsStat {
  */
 export interface FsBridge {
     stat(args: { filePath: string; cwd?: string }): Promise<FsStat | null>;
+    /**
+     * Read the full contents of a file.
+     *
+     * @throws Implementations must throw (e.g. an `ENOENT`-style error) when
+     * the file does not exist or cannot be read. This method does **not**
+     * return `null` for missing files — callers are expected to catch thrown
+     * errors.
+     */
     readFile(args: { filePath: string; cwd?: string }): Promise<Buffer>;
     mkdirp(args: { filePath: string; cwd?: string }): Promise<void>;
+    /**
+     * Write data to a file.
+     *
+     * Implementations must automatically create any missing parent directories
+     * before writing (equivalent to `mkdir -p` followed by the write).
+     * Callers rely on this behaviour and do **not** call {@link mkdirp}
+     * separately before `writeFile`.
+     */
     writeFile(args: { filePath: string; cwd?: string; data: string | Buffer }): Promise<void>;
 }
 
@@ -565,7 +581,11 @@ export interface PluginApi {
 
     /**
      * Resolve a path relative to the plugin's directory.
-     * @remarks Returns the input unchanged in clawtools (no plugin directory context).
+     *
+     * @remarks **Placeholder — currently returns `input` unchanged.**
+     * In OpenClaw, this resolves paths relative to the plugin's own directory.
+     * In clawtools, no plugin directory context is available at registration
+     * time, so this is a no-op stub reserved for future resolution logic.
      */
     resolvePath: (input: string) => string;
 

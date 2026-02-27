@@ -479,13 +479,16 @@ export function getCoreToolCatalog(): ToolMeta[] {
 /**
  * Discover and register all core OpenClaw tools into a registry.
  *
- * This reads tool metadata from the catalog and registers lazy factories
- * that deep-link into the openclaw submodule for actual implementations.
+ * **Catalog/metadata use only.** This function immediately registers a
+ * null-returning stub factory for every matching catalog entry — no module
+ * loading occurs and no async I/O is performed. Because every factory always
+ * returns `null`, calling {@link ToolRegistry.resolveAll} on a registry
+ * populated solely by this function will return an empty array (`[]`).
  *
- * **Note:** Factories registered by this function always return `null` at
- * call time because ESM `import()` is asynchronous. Use this function only
- * for catalog/metadata-only use-cases (listing tools, generating schemas).
- * For executable tools use {@link discoverCoreToolsAsync} instead.
+ * Use this only for catalog or metadata use-cases: listing tool names,
+ * descriptions, and sections without needing executable tools.
+ * For tools that can actually execute, use {@link discoverCoreToolsAsync}
+ * instead.
  *
  * @param registry - The registry to populate.
  * @param options - Discovery options (filters, paths).
@@ -587,7 +590,10 @@ async function discoverFromBundles(
         const bundleInfo = manifest.entries[entry.id];
 
         if (!bundleInfo) {
-            // Tool not in manifest — register with null factory
+            // Ghost registration: this tool has no entry in the bundle manifest.
+            // The null-returning factory is still registered so the tool appears
+            // in registry.list() / getCoreToolCatalog() for catalog enumeration,
+            // but registry.resolveAll() will silently skip it (factory → null → []).
             registry.registerFactory(() => null, meta);
             failedCount++;
             continue;
@@ -690,6 +696,11 @@ async function discoverFromSource(
             failedCount++;
         }
 
+        // Ghost registration: the factory is always registered regardless of
+        // whether the module loaded above. If the import failed, moduleCache
+        // will have no entry for this path and the factory always returns null,
+        // so the tool appears in registry.list() / getCoreToolCatalog() but
+        // registry.resolveAll() will silently skip it (factory → null → []).
         registry.registerFactory(
             (ctx: ToolContext) => {
                 const mod = moduleCache.get(modulePath);

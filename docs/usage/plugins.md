@@ -188,6 +188,25 @@ export default {
 };
 ```
 
+### Export resolution order
+
+When the loader imports a plugin entry point it determines the registration
+function using the following priority (applied to `default ?? module`):
+
+1. **`default` export checked first** (`mod.default`):
+   - A function → used directly as the register function.
+   - An object with a `register` method → that method is called.
+   - An object with an `activate` method → that method is called.
+2. **Named exports as fallback** (when no `default` is present, the module
+   namespace object is used):
+   - A named `register` function → used as the register function.
+   - A named `activate` function → used as the register function.
+
+> **Note:** A bare named `plugin` export (e.g. `export const plugin = { register: fn }`)
+> is **not** recognised by the loader. If you use this pattern alongside a `default`
+> export, the `default` export takes precedence and the `plugin` export is silently
+> ignored. Always use one of the four supported patterns listed above.
+
 ### Registering a tool factory
 
 ```ts
