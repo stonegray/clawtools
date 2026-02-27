@@ -42,6 +42,44 @@ describe("ConnectorRegistry", () => {
             registry.register(makeMockConnector({ id: "b", provider: "provB" }));
             expect(registry.size).toBe(2);
         });
+
+        it("re-registering with the same ID but a different api transport clears the stale apiIndex (bug #2 fix)", () => {
+            // Register with one api transport, then overwrite with a different one.
+            // The old api slot must be cleaned up so getByApi doesn't return a
+            // connector that no longer uses that transport.
+            registry.register(makeMockConnector({ api: "openai-completions" }));
+            expect(registry.getByApi("openai-completions")).toHaveLength(1);
+            expect(registry.getByApi("anthropic-messages")).toHaveLength(0);
+
+            // Overwrite with the same ID but a different api
+            registry.register(makeMockConnector({ api: "anthropic-messages" }));
+
+            // Old api entry must be gone
+            expect(registry.getByApi("openai-completions")).toHaveLength(0);
+            // New api entry must be present
+            expect(registry.getByApi("anthropic-messages")).toHaveLength(1);
+            // Size is still 1 — same ID, just overwritten
+            expect(registry.size).toBe(1);
+        });
+
+        it("re-registering with the same ID but a different provider clears the stale providerIndex (bug #3 fix)", () => {
+            // Register with one provider, then overwrite with a different provider name.
+            // The old provider slot must be removed so getByProvider doesn't return
+            // a connector that is no longer registered under that provider.
+            registry.register(makeMockConnector({ provider: "provider-alpha" }));
+            expect(registry.getByProvider("provider-alpha")).toBeDefined();
+
+            // Overwrite with the same ID but a different provider
+            registry.register(makeMockConnector({ provider: "provider-beta" }));
+
+            // Old provider entry must be gone
+            expect(registry.getByProvider("provider-alpha")).toBeUndefined();
+            // New provider entry must be present and point to the connector
+            expect(registry.getByProvider("provider-beta")).toBeDefined();
+            expect(registry.getByProvider("provider-beta")?.id).toBe("mock-connector");
+            // Size is still 1 — same ID, just overwritten
+            expect(registry.size).toBe(1);
+        });
     });
 
     // ---------------------------------------------------------------------------

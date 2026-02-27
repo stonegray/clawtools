@@ -53,6 +53,29 @@ describe("pre-aborted signal", () => {
         // Must reject (reason does not need to be the thrown value in all runtimes)
         await expect(app().query("hi", ac.signal)).rejects.toThrow();
     });
+
+    it("rejection value is (or wraps) the reason passed to AbortController.abort() (issue 51)", async () => {
+        // Node.js 20+ native fetch throws signal.reason directly when the signal
+        // is already aborted before fetch() is called.  The error that propagates
+        // through the connector's async generator and out of query() should
+        // therefore BE the abort reason, or have it as its .cause property.
+        mock.setScenario({ type: "text", content: "never arrives" });
+        const abortReason = new Error("user-initiated abort for cause test");
+        const ac = new AbortController();
+        ac.abort(abortReason);
+
+        let caughtErr: unknown;
+        try {
+            await app().query("hi", ac.signal);
+        } catch (e) {
+            caughtErr = e;
+        }
+
+        expect(caughtErr).toBeDefined();
+        // Accept either: the reason is thrown directly, OR it is exposed as .cause
+        const err = caughtErr as Error & { cause?: unknown };
+        expect(err === abortReason || err.cause === abortReason).toBe(true);
+    });
 });
 
 // ---------------------------------------------------------------------------
