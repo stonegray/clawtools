@@ -119,12 +119,15 @@ export class ToolRegistry {
      * context and their results are included.
      *
      * @param ctx - The context to pass to tool factories.
+     * @param onError - Optional callback invoked when a factory throws. Receives
+     *   the tool metadata and the thrown error. If omitted, errors are silently
+     *   discarded (same behaviour as before).
      * @returns An array of resolved tools.
      */
-    resolveAll(ctx?: ToolContext): Tool[] {
+    resolveAll(ctx?: ToolContext, onError?: (meta: ToolMeta, err: unknown) => void): Tool[] {
         const tools: Tool[] = [];
         for (const entry of this.entries.values()) {
-            const resolved = this.resolveEntry(entry, ctx);
+            const resolved = this.resolveEntry(entry, ctx, onError);
             if (resolved) {
                 tools.push(...resolved);
             }
@@ -137,9 +140,10 @@ export class ToolRegistry {
      *
      * @param profile - The profile to filter by ("minimal", "coding", "messaging", "full").
      * @param ctx - The context to pass to tool factories.
+     * @param onError - Optional callback invoked when a factory throws.
      * @returns An array of resolved tools matching the profile.
      */
-    resolveByProfile(profile: ToolProfile, ctx?: ToolContext): Tool[] {
+    resolveByProfile(profile: ToolProfile, ctx?: ToolContext, onError?: (meta: ToolMeta, err: unknown) => void): Tool[] {
         const tools: Tool[] = [];
         for (const entry of this.entries.values()) {
             if (
@@ -147,7 +151,7 @@ export class ToolRegistry {
                 entry.meta.profiles.includes(profile) ||
                 entry.meta.profiles.includes("full")
             ) {
-                const resolved = this.resolveEntry(entry, ctx);
+                const resolved = this.resolveEntry(entry, ctx, onError);
                 if (resolved) {
                     tools.push(...resolved);
                 }
@@ -161,12 +165,13 @@ export class ToolRegistry {
      *
      * @param name - The tool's canonical name.
      * @param ctx - The context to pass to tool factories.
+     * @param onError - Optional callback invoked when the factory throws.
      * @returns The resolved tool, or undefined if not found.
      */
-    resolve(name: string, ctx?: ToolContext): Tool | undefined {
+    resolve(name: string, ctx?: ToolContext, onError?: (meta: ToolMeta, err: unknown) => void): Tool | undefined {
         const entry = this.entries.get(name);
         if (!entry) return undefined;
-        const resolved = this.resolveEntry(entry, ctx);
+        const resolved = this.resolveEntry(entry, ctx, onError);
         return resolved?.[0];
     }
 
@@ -243,6 +248,7 @@ export class ToolRegistry {
     private resolveEntry(
         entry: ToolRegistryEntry,
         ctx?: ToolContext,
+        onError?: (meta: ToolMeta, err: unknown) => void,
     ): Tool[] | null {
         const { source } = entry;
 
@@ -251,16 +257,15 @@ export class ToolRegistry {
             return [source];
         }
 
-        // Factory — invoke with the provided context, swallowing errors gracefully.
-        // Tools that fail to instantiate (missing config, unavailable native deps,
-        // etc.) are silently skipped so the rest of the registry is unaffected.
-        // Callers that need visibility into failures should use ToolRegistry with
-        // a per-factory try/catch in their own resolveAll wrapper.
+        // Factory — invoke with the provided context.
+        // Errors are reported via onError if provided; otherwise silently skipped
+        // so the rest of the registry is unaffected.
         try {
             const result = source(ctx ?? {});
             if (!result) return null;
             return Array.isArray(result) ? result : [result];
-        } catch {
+        } catch (err) {
+            onError?.(entry.meta, err);
             return null;
         }
     }
