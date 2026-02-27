@@ -18,7 +18,6 @@
  *   npx tsx examples/agentic/index.ts "List all .ts files in src/"
  */
 
-import crypto from "node:crypto";
 import {
     createClawtoolsAsync,
     createNodeBridge,
@@ -164,7 +163,7 @@ for (let turn = 0; turn < MAX_TURNS; turn++) {
             console.error(`  → ${tc.name}(${JSON.stringify(tc.arguments)})`);
             try {
                 const result = await tool.execute(
-                    crypto.randomUUID(),   // toolCallId for tracking
+                    tc.id,             // use the LLM-assigned call ID for traceability
                     tc.arguments,
                 );
 
