@@ -225,9 +225,8 @@ export async function discoverBuiltinConnectorsAsync(): Promise<Connector[]> {
             if (typeof mod.getBuiltinConnectors === "function") {
                 return mod.getBuiltinConnectors();
             }
-        } catch (err) {
+        } catch {
             // Bundle failed to load — fall through to source fallback
-            console.warn("[clawtools] Failed to load connector bundle:", err);
         }
     }
 
