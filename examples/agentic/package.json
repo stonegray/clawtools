@@ -1,0 +1,16 @@
+{
+  "name": "@clawtools-examples/agentic-loop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Example: End-to-end agentic loop with tool use (init → stream → execute → feed back)",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "clawtools": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
