@@ -60,3 +60,4 @@ export {
     normalizeSchema,
     cleanSchemaForGemini,
 } from "./schema.js";
+export { createNodeBridge } from "./node-bridge.js";

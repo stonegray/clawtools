@@ -130,6 +130,47 @@ export interface ToolMeta {
 }
 
 // =============================================================================
+// FsBridge — file-system abstraction for sandboxed fs tools
+// =============================================================================
+
+/**
+ * Stat result returned by a {@link FsBridge}.
+ */
+export interface FsStat {
+    type: "file" | "directory" | "other";
+    size: number;
+    mtimeMs: number;
+}
+
+/**
+ * Minimal file-system abstraction required by the core fs tools
+ * (`read`, `write`, `edit`).
+ *
+ * Implement this interface to plug any file-system backend (local Node.js,
+ * sandboxed container, virtual FS, …) into the tool layer.
+ * For local Node.js use, call {@link createNodeBridge} from
+ * `clawtools/tools` instead of implementing this manually.
+ *
+ * @example
+ * ```ts
+ * import { createNodeBridge } from "clawtools/tools";
+ *
+ * const ct = await createClawtoolsAsync();
+ * const tools = ct.tools.resolveAll({
+ *   workspaceDir: "/my/project",
+ *   root: "/my/project",
+ *   bridge: createNodeBridge("/my/project"),
+ * });
+ * ```
+ */
+export interface FsBridge {
+    stat(args: { filePath: string; cwd?: string }): Promise<FsStat | null>;
+    readFile(args: { filePath: string; cwd?: string }): Promise<Buffer>;
+    mkdirp(args: { filePath: string; cwd?: string }): Promise<void>;
+    writeFile(args: { filePath: string; cwd?: string; data: string | Buffer }): Promise<void>;
+}
+
+// =============================================================================
 // Tool Factory (for plugin-style deferred creation)
 // =============================================================================
 
@@ -154,6 +195,20 @@ export interface ToolContext {
     agentAccountId?: string;
     /** Whether the agent is running in a sandbox. */
     sandboxed?: boolean;
+    /**
+     * Filesystem root for the `fs` tools (read / write / edit).
+     * Defaults to `workspaceDir` when omitted.
+     * Required for the fs tools to operate — omitting it causes those
+     * tools to be silently skipped by `resolveAll()`.
+     */
+    root?: string;
+    /**
+     * File-system bridge implementation for the `fs` tools.
+     * Required for the fs tools to operate — omitting it causes those
+     * tools to be silently skipped by `resolveAll()`.
+     * Use `createNodeBridge(root)` from `clawtools/tools` for local Node.js usage.
+     */
+    bridge?: FsBridge;
 }
 
 /**

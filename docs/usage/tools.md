@@ -72,12 +72,27 @@ If a factory throws during resolution, that tool is silently skipped (the rest o
 
 Resolve all registered tools for the given context. Factories receive `ctx`; direct tools are returned as-is.
 
+> **Important:** Factories that throw or return `null` are **silently skipped** — the rest of the registry is unaffected and no error is raised. If a tool section you expect is missing from the result, the most likely cause is a missing or wrong context field (see the [Context requirements per section](#context-requirements-per-section) table below).
+
 ```ts
 const tools = registry.resolveAll({
   workspaceDir: "/my/project",
   agentDir: "/my/project/.agent",
   sandboxed: false,
 });
+```
+
+#### Context requirements per section
+
+| Section | Required context fields | Notes |
+|---------|------------------------|-------|
+| `fs` — read / write / edit | `root`, `bridge` | Both are **required**. Without them the factory returns `null` and the tools are silently dropped. Use `createNodeBridge(root)` for local Node.js. |
+| `runtime` — exec | _(none required)_ | `workspaceDir` used as default `cwd`; `sessionKey` / `agentId` enable session notifications. |
+| `web` — web_search / web_fetch | _(none required)_ | Use their own config / env vars for API keys. |
+| `memory` — memory_search / memory_get | `agentDir` | Memory files are stored under `agentDir`. |
+| `sessions` — sessions_\* | `sessionKey`, `agentId`, `messageChannel` | Inter-session messaging. |
+| `ui` — browser / canvas | _(none required for local)_ | Sandboxed browser requires a full openclaw sandbox context. |
+| All others | _(none required)_ | Created with defaults; optional context fields may be used. |
 ```
 
 #### `registry.resolveByProfile(profile, ctx?)` → `Tool[]`
@@ -361,14 +376,78 @@ interface ToolContext {
   messageChannel?: string;            // channel the message arrived on
   agentAccountId?: string;            // agent account identifier
   sandboxed?: boolean;                // whether running in a sandbox
+  root?: string;                      // fs root for read/write/edit tools (defaults to workspaceDir)
+  bridge?: FsBridge;                  // fs implementation for read/write/edit tools
 }
 ```
 
 Omit any fields you don't need; all are optional.
 
+> `root` and `bridge` are required to enable the `fs` tool section (read / write / edit). Without them those tools are silently skipped. See [FsBridge](#fsbridge) below.
+
+> `root` and `bridge` are required to enable the `fs` tool section (read / write / edit). Without them those tools are silently skipped. See [FsBridge](#fsbridge) below.
+
 ---
 
-## Schema extraction for LLM submission
+## FsBridge
+
+The `fs` tool section (`read`, `write`, `edit`) requires a file-system bridge. The bridge abstracts the underlying storage so that tools can work against a local directory, a sandboxed container, a virtual file system, or any other backend.
+
+### `createNodeBridge(root)` — local Node.js bridge
+
+For local Node.js usage, import `createNodeBridge` and pass it in the context:
+
+```ts
+import { createClawtoolsAsync } from "clawtools";
+import { createNodeBridge } from "clawtools/tools";
+
+const ct = await createClawtoolsAsync();
+const root = process.cwd();
+
+const tools = ct.tools.resolveAll({
+  workspaceDir: root,
+  root,
+  bridge: createNodeBridge(root),
+});
+
+// read/write/edit tools are now fully operational
+const readTool = tools.find(t => t.name === "read")!;
+const result = await readTool.execute(crypto.randomUUID(), { path: "README.md" });
+```
+
+### Custom bridge
+
+To implement a custom bridge (container, virtual fs, remote storage, …), satisfy the `FsBridge` interface:
+
+```ts
+import type { FsBridge, FsStat } from "clawtools";
+
+const myBridge: FsBridge = {
+  async stat({ filePath, cwd }): Promise<FsStat | null> {
+    // Return null if the path does not exist.
+    return { type: "file", size: 42, mtimeMs: Date.now() };
+  },
+  async readFile({ filePath, cwd }): Promise<Buffer> {
+    return Buffer.from("file contents");
+  },
+  async mkdirp({ filePath, cwd }): Promise<void> {
+    // Create directory and all parents.
+  },
+  async writeFile({ filePath, cwd, data }): Promise<void> {
+    // data is string | Buffer.
+  },
+};
+```
+
+Passes `root` and `bridge` together:
+
+```ts
+const tools = ct.tools.resolveAll({
+  workspaceDir: "/sandbox/workspace",
+  root: "/sandbox/workspace",
+  bridge: myBridge,
+});
+```
 
 Use `extractToolSchemas` to convert resolved tools into the format LLM APIs expect:
 

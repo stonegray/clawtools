@@ -60,6 +60,8 @@ export type {
     ContentBlock,
     TextContent,
     ImageContent,
+    FsBridge,
+    FsStat,
 
     // Connector types
     Connector,
@@ -107,6 +109,7 @@ export {
     extractToolSchemas,
     normalizeSchema,
     cleanSchemaForGemini,
+    createNodeBridge,
 } from "./tools/index.js";
 export type { DiscoveryOptions } from "./tools/index.js";
 
