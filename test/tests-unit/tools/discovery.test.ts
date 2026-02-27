@@ -192,8 +192,15 @@ describe("Tool discovery", () => {
             // Start discovery without awaiting.  The async function suspends at its
             // first await inside discoverFromBundles/discoverFromSource, so no
             // factories have been registered yet by the time the next line runs.
+            //
+            // Use a non-existent openclawRoot to prevent the source-fallback path
+            // from trying to import from the real openclaw submodule, which would
+            // cascade into a long import chain and time out the test.
             const registry = new ToolRegistry();
-            const promise = discoverCoreToolsAsync(registry, { include: ["read"] });
+            const promise = discoverCoreToolsAsync(registry, {
+                include: ["read"],
+                openclawRoot: "/nonexistent-root-for-lazy-load-test",
+            });
 
             // Registry is still empty — no factories registered synchronously
             expect(registry.size).toBe(0);
@@ -202,13 +209,17 @@ describe("Tool discovery", () => {
             await promise;
 
             // After resolution the catalog entry for "read" is registered
+            // (ghost registration: factory returns null since openclawRoot is fake)
             expect(registry.size).toBe(1);
             expect(registry.has("read")).toBe(true);
         });
 
         it("registers factories for all tools matching an include filter", async () => {
             const registry = new ToolRegistry();
-            await discoverCoreToolsAsync(registry, { include: ["read", "write", "exec"] });
+            await discoverCoreToolsAsync(registry, {
+                include: ["read", "write", "exec"],
+                openclawRoot: "/nonexistent-root-for-filter-test",
+            });
             expect(registry.size).toBe(3);
             expect(registry.has("read")).toBe(true);
             expect(registry.has("write")).toBe(true);
