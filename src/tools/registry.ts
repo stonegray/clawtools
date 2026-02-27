@@ -159,8 +159,7 @@ export class ToolRegistry {
         for (const entry of this.entries.values()) {
             if (
                 profile === "full" ||
-                entry.meta.profiles.includes(profile) ||
-                entry.meta.profiles.includes("full")
+                entry.meta.profiles.includes(profile)
             ) {
                 const resolved = this.resolveEntry(entry, ctx, onError);
                 if (resolved) {
