@@ -61,7 +61,7 @@ clawtools/plugins    → loadPlugins
 ## Features
 
 ### Tool System
-- **25 core tools** compiled directly from the OpenClaw submodule: filesystem (`read`, `write`, `edit`), runtime (`exec`), web (`web_search`, `web_fetch`), memory, sessions, browser, canvas, messaging, automation, media, and more
+- **23 core tools** compiled directly from the OpenClaw submodule: filesystem (`read`, `write`, `edit`), runtime (`exec`), web (`web_search`, `web_fetch`), memory, sessions, browser, canvas, messaging, automation, media, and more
 - Sync (`createClawtools`) and async (`createClawtoolsAsync`) entry points — sync for catalog/metadata, async for executable tools backed by pre-built ESM bundles
 - **`FsBridge` interface + `createNodeBridge(root)`** — plug any filesystem backend (local Node.js, sandboxed container, virtual FS) into the `read`/`write`/`edit` tools; `createNodeBridge` is the ready-to-use Node.js implementation
 - Filter tools by **profile** (`minimal`, `coding`, `messaging`, `full`) or **group** (`group:fs`, `group:web`, …)

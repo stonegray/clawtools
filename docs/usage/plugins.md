@@ -133,10 +133,10 @@ The loader looks for an entry point in this order:
 1. `package.json` → `openclaw.extensions[0]` field (relative path)
 2. `index.ts`
 3. `index.js`
-4. `src/index.ts`
-5. `src/index.js`
-6. `index.mts`
-7. `index.mjs`
+4. `index.mts`
+5. `index.mjs`
+6. `src/index.ts`
+7. `src/index.js`
 
 > **Note:** The loader does **not** use a TypeScript runtime (no jiti). Entry points must be pre-compiled JavaScript unless you are running under Node 22+ with `--experimental-strip-types`, tsx, or ts-node.
 

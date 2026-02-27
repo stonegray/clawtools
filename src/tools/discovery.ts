@@ -442,7 +442,7 @@ const CORE_TOOL_GROUPS: Record<string, string[]> = {
 
 /**
  * Expand group references in a tool ID list.
- * "group:fs" → ["read", "write", "edit", "apply_patch"]
+ * "group:fs" → ["read", "write", "edit"]
  */
 function expandGroups(ids: string[]): Set<string> {
     const result = new Set<string>();
@@ -491,7 +491,8 @@ export function getCoreToolCatalog(): ToolMeta[] {
  * instead.
  *
  * @param registry - The registry to populate.
- * @param options - Discovery options (filters, paths).
+ * @param options - Discovery options (filters, paths). Set {@link DiscoveryOptions.onLoadWarning}
+ *   to observe factory-load errors instead of having them silently discarded.
  * @see discoverCoreToolsAsync
  */
 export function discoverCoreTools(
@@ -543,7 +544,8 @@ const moduleCache = new Map<string, Record<string, unknown>>();
  * (metadata available) but their factories return `null` at call time.
  *
  * @param registry - The registry to populate.
- * @param options - Discovery options.
+ * @param options - Discovery options. Set {@link DiscoveryOptions.onLoadWarning}
+ *   to observe factory-load errors instead of having them silently discarded.
  */
 export async function discoverCoreToolsAsync(
     registry: ToolRegistry,

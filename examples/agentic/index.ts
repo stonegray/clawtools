@@ -30,7 +30,7 @@ import {
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const PROVIDER = "anthropic";                          // change to "openai", "google", etc.
-const MODEL_ID = "claude-opus-4-5";                    // change to any model in that provider
+const MODEL_ID = "claude-opus-4-6";                    // change to any model in that provider
 const MAX_TURNS = 10;                                  // safety limit on tool-call rounds
 const ROOT = process.cwd();                            // workspace root for fs tools
 

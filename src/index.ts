@@ -18,6 +18,8 @@
  * }
  *
  * // Resolve tools for an LLM context
+ * // Note: pass root + bridge (FileBridge) to enable the fs tools (read/write/edit).
+ * // e.g.: ct.tools.resolveAll({ workspaceDir: "/my/project", root: "/my/project", bridge: createNodeBridge("/my/project") })
  * const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
  *
  * // Register a custom tool

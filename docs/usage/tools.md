@@ -234,8 +234,8 @@ Groups are named aliases for sets of tool IDs, usable in `DiscoveryOptions.inclu
 
 | Group | Tool IDs |
 |-------|----------|
-| `group:fs` | `read`, `write`, `edit`, `apply_patch` |
-| `group:runtime` | `exec`, `process` |
+| `group:fs` | `read`, `write`, `edit` |
+| `group:runtime` | `exec` |
 | `group:web` | `web_search`, `web_fetch` |
 | `group:memory` | `memory_search`, `memory_get` |
 | `group:sessions` | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `subagents`, `session_status` |
@@ -250,7 +250,7 @@ Groups are named aliases for sets of tool IDs, usable in `DiscoveryOptions.inclu
 
 ## Core tool catalog
 
-All 25 built-in tools, their sections, profiles, and descriptions:
+All 23 built-in tools, their sections, profiles, and descriptions:
 
 ### Section: `fs` — Files
 

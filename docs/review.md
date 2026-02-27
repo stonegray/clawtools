@@ -42,8 +42,8 @@
 
 **Rating:** ✅ Good
 
-- Version 0.1.0, ESM-only (`"type": "module"`), `engines: ">=18"` — appropriate pre-release posture.
-- Zero runtime dependencies — all 20 deps are `devDependencies`. Clean for consumers.
+- Version 0.1.0, ESM-only (`"type": "module"`), `engines: ">=20.0.0"` — appropriate pre-release posture.
+- Minimal runtime dependencies — `@sinclair/typebox`, `ajv`, and `undici` are in `dependencies`; 20 deps are `devDependencies`.
 - Four subpath exports (`.`, `./tools`, `./connectors`, `./plugins`) with correct `types`/`import` conditions.
 - `files` array correctly scopes the tarball to `dist/`, `README.md`, `LICENSE`.
 - Scripts are well-organized: `build`, `build:tools`, `dev`, `typecheck`, `typecheck:test`, `test`, `test:coverage`, `release:*`.
@@ -108,7 +108,7 @@
 
 **Rating:** ✅ Good
 
-- Three-job pipeline: `lint-typecheck` → `test` (matrix: Node 18/20/22) → `build`.
+- Three-job pipeline: `lint-typecheck` → `test` (matrix: Node 20/22) → `build`.
 - Tests both `typecheck` and `typecheck:test` — catches type errors in test code too.
 - `act` guard (`if: ${{ !env.ACT }}`) on build job to skip locally.
 - Proper caching of `node_modules` via `actions/setup-node` cache.
@@ -483,7 +483,7 @@
 | Test:source ratio | ~1.4:1 |
 | Test files | 9 |
 | Test count | 312 |
-| Runtime dependencies | 0 |
+| Runtime dependencies | 3 |
 | Core tools bundled | 23 |
 | Type coverage | strict mode, no `any` casts |
 
