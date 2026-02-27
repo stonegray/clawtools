@@ -176,21 +176,63 @@ export function readNumberParam(
 // Boolean parameters
 // =============================================================================
 
+export interface BooleanParamOptions {
+    /** Throw ToolInputError if the parameter is absent. */
+    required?: boolean;
+    /** Value to return when absent and not required. Defaults to `false`. */
+    defaultValue?: boolean;
+    /** Human-readable name used in error messages. Defaults to `key`. */
+    label?: string;
+}
+
 /**
  * Read a boolean parameter from tool arguments.
  *
+ * Supports both camelCase and snake_case keys. Coerces string `"true"` / `"1"`
+ * to `true` and everything else to `false` via `Boolean()`.
+ *
+ * Accepts either the legacy positional `defaultValue` (third arg as `boolean`)
+ * or a {@link BooleanParamOptions} object for structured access including
+ * `required: true`.
+ *
  * @param params - The raw parameter object.
- * @param key - The parameter name.
- * @param defaultValue - Value to return if not present.
- * @returns The boolean value.
+ * @param key - The parameter name (camelCase).
+ * @param optionsOrDefault - Options object or legacy positional default value.
+ * @returns The boolean value, or `defaultValue` if absent and not required.
+ * @throws ToolInputError if `required: true` and the parameter is absent.
  */
 export function readBooleanParam(
     params: Record<string, unknown>,
     key: string,
-    defaultValue = false,
+    optionsOrDefault: BooleanParamOptions & { required: true },
+): boolean;
+export function readBooleanParam(
+    params: Record<string, unknown>,
+    key: string,
+    optionsOrDefault?: boolean | BooleanParamOptions,
+): boolean;
+export function readBooleanParam(
+    params: Record<string, unknown>,
+    key: string,
+    optionsOrDefault: boolean | BooleanParamOptions = false,
 ): boolean {
+    let required = false;
+    let defaultValue = false;
+    let label = key;
+
+    if (typeof optionsOrDefault === "boolean") {
+        defaultValue = optionsOrDefault;
+    } else {
+        required = optionsOrDefault.required ?? false;
+        defaultValue = optionsOrDefault.defaultValue ?? false;
+        label = optionsOrDefault.label ?? key;
+    }
+
     const raw = readParamRaw(params, key);
-    if (raw === undefined || raw === null) return defaultValue;
+    if (raw === undefined || raw === null) {
+        if (required) throw new ToolInputError(`${label} required`);
+        return defaultValue;
+    }
     if (typeof raw === "boolean") return raw;
     if (typeof raw === "string") {
         return raw.toLowerCase() === "true" || raw === "1";

@@ -109,13 +109,22 @@ const page  = readNumberParam(params, "page", { required: true, integer: true })
 { required?: boolean; integer?: boolean; label?: string }
 ```
 
-### `readBooleanParam(params, key, defaultValue?)` → `boolean`
+### `readBooleanParam(params, key, optionsOrDefault?)` → `boolean`
 
-Read a boolean. Coerces `"true"`, `"1"` → `true`, everything else → `false`. Never throws; returns `defaultValue` (default: `false`) if missing.
+Read a boolean. Coerces `"true"`, `"1"` → `true`, everything else → `false` via `Boolean()`. Returns `defaultValue` (default: `false`) if absent.
+
+Accepts either a positional `boolean` default (legacy) or a `BooleanParamOptions` object:
 
 ```ts
-const recursive = readBooleanParam(params, "recursive", false);
-const force     = readBooleanParam(params, "force");   // defaults to false
+const recursive = readBooleanParam(params, "recursive", false);       // legacy positional default
+const force     = readBooleanParam(params, "force");                   // defaults to false
+const verbose   = readBooleanParam(params, "verbose", { defaultValue: true });  // options form
+const strict    = readBooleanParam(params, "strict",  { required: true });      // throws if absent
+```
+
+**`BooleanParamOptions`:**
+```ts
+{ required?: boolean; defaultValue?: boolean; label?: string }
 ```
 
 ### `readStringArrayParam(params, key, options?)` → `string[] | undefined`

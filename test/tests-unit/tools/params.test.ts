@@ -134,6 +134,26 @@ describe("Parameter helpers", () => {
             expect(readBooleanParam({ flag: 1 }, "flag")).toBe(true);
             expect(readBooleanParam({ flag: 0 }, "flag")).toBe(false);
         });
+
+        it("returns options.defaultValue when missing", () => {
+            expect(readBooleanParam({}, "flag", { defaultValue: true })).toBe(true);
+            expect(readBooleanParam({}, "flag", { defaultValue: false })).toBe(false);
+        });
+
+        it("throws when required: true and missing", () => {
+            expect(() => readBooleanParam({}, "flag", { required: true })).toThrow(ToolInputError);
+        });
+
+        it("uses label in error message when required and missing", () => {
+            expect(() =>
+                readBooleanParam({}, "flag", { required: true, label: "verbose mode" }),
+            ).toThrow("verbose mode required");
+        });
+
+        it("does not throw when required: true and value is present", () => {
+            expect(readBooleanParam({ flag: true }, "flag", { required: true })).toBe(true);
+            expect(readBooleanParam({ flag: false }, "flag", { required: true })).toBe(false);
+        });
     });
 
     // ---------------------------------------------------------------------------
