@@ -78,7 +78,9 @@ export type {
     UserMessage,
     AssistantMessage,
     ConversationMessage,
+    ContextMessage,
     ToolResultMessage,
+    UsageInfo,
 
     // Plugin types
     PluginDefinition,
@@ -112,7 +114,12 @@ export {
     cleanSchemaForGemini,
     createNodeBridge,
 } from "./tools/index.js";
-export type { DiscoveryOptions } from "./tools/index.js";
+export type {
+    DiscoveryOptions,
+    StringParamOptions,
+    NumberParamOptions,
+    BooleanParamOptions,
+} from "./tools/index.js";
 
 // =============================================================================
 // Re-exports: Connector system

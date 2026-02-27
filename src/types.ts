@@ -305,6 +305,17 @@ export interface ResolvedAuth {
 // Stream Event Types
 // =============================================================================
 
+/**
+ * Token-usage information reported by the LLM on a completed turn.
+ *
+ * Fields are optional so that connectors which only have partial usage data
+ * (e.g. only input-token counts) do not need to synthesise zeros.
+ */
+export interface UsageInfo {
+    inputTokens?: number;
+    outputTokens?: number;
+}
+
 /** Events emitted during an LLM streaming response. */
 export type StreamEvent =
     | { type: "start" }
@@ -325,7 +336,7 @@ export type StreamEvent =
     | {
         type: "done";
         stopReason: "stop" | "toolUse" | "length" | "error";
-        usage?: { inputTokens: number; outputTokens: number };
+        usage?: UsageInfo;
     }
     | { type: "error"; error: string };
 
@@ -357,6 +368,15 @@ export interface AssistantMessage {
 
 /** Union of all first-class conversation message types. */
 export type ConversationMessage = UserMessage | AssistantMessage;
+
+/**
+ * Union of all message types that can appear in a conversation history array,
+ * including tool results fed back into the context.
+ *
+ * Use this type when storing or typing the full message history passed to a
+ * connector via {@link StreamContext.messages}.
+ */
+export type ContextMessage = UserMessage | AssistantMessage | ToolResultMessage;
 
 /**
  * A tool result message — clawtools' internal format for feeding tool
