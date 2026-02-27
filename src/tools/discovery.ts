@@ -498,6 +498,11 @@ export function discoverCoreTools(
     const includeSet = options?.include ? expandGroups(options.include) : null;
     const excludeSet = options?.exclude ? expandGroups(options.exclude) : new Set<string>();
 
+    // Register section labels so listBySection() returns human-readable names.
+    for (const section of CORE_SECTIONS) {
+        registry.registerSection(section);
+    }
+
     for (const entry of CORE_TOOL_CATALOG) {
         // Apply include/exclude filters
         if (includeSet && !includeSet.has(entry.id)) continue;
@@ -545,6 +550,11 @@ export async function discoverCoreToolsAsync(
     const excludeSet = options?.exclude
         ? expandGroups(options.exclude)
         : new Set<string>();
+
+    // Register section labels so listBySection() returns human-readable names.
+    for (const section of CORE_SECTIONS) {
+        registry.registerSection(section);
+    }
 
     // Try bundled tools first
     const manifest = resolveBundleManifest();

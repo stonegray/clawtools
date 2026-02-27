@@ -60,10 +60,21 @@ interface ToolRegistryEntry {
  */
 export class ToolRegistry {
     private entries = new Map<string, ToolRegistryEntry>();
+    private sections = new Map<string, string>(); // sectionId → label
 
     // ---------------------------------------------------------------------------
     // Registration
     // ---------------------------------------------------------------------------
+
+    /**
+     * Register a section label. Called by the discovery layer so that
+     * `listBySection()` can return human-readable labels for core sections.
+     *
+     * @param section - The section to register.
+     */
+    registerSection(section: ToolSection): void {
+        this.sections.set(section.id, section.label);
+    }
 
     /**
      * Register a fully-instantiated tool.
@@ -195,20 +206,18 @@ export class ToolRegistry {
      */
     listBySection(): Array<ToolSection & { tools: ToolMeta[] }> {
         const sectionMap = new Map<string, ToolMeta[]>();
-        const sectionLabels = new Map<string, string>();
 
         for (const entry of this.entries.values()) {
             const sId = entry.meta.sectionId;
             if (!sectionMap.has(sId)) {
                 sectionMap.set(sId, []);
-                sectionLabels.set(sId, sId); // Default label = id
             }
             sectionMap.get(sId)!.push(entry.meta);
         }
 
         return Array.from(sectionMap.entries(), ([id, tools]) => ({
             id,
-            label: sectionLabels.get(id) ?? id,
+            label: this.sections.get(id) ?? id, // fall back to raw ID for unknown sections
             tools,
         }));
     }
