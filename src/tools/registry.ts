@@ -150,15 +150,26 @@ export class ToolRegistry {
      * Resolve tools filtered by a tool profile.
      *
      * @param profile - The profile to filter by ("minimal", "coding", "messaging", "full").
+     *   Passing `"full"` acts as a wildcard — all registered tools are included.
      * @param ctx - The context to pass to tool factories.
      * @param onError - Optional callback invoked when a factory throws.
+     * @param options - Additional filter options.
+     * @param options.includeAll - If `true`, include all registered tools regardless of
+     *   their `profiles` array. Equivalent to passing `profile: "full"` and kept for
+     *   call-site clarity. Backward-compatible with the existing `"full"` string.
      * @returns An array of resolved tools matching the profile.
      */
-    resolveByProfile(profile: ToolProfile, ctx?: ToolContext, onError?: (meta: ToolMeta, err: unknown) => void): Tool[] {
+    resolveByProfile(
+        profile: ToolProfile,
+        ctx?: ToolContext,
+        onError?: (meta: ToolMeta, err: unknown) => void,
+        options?: { includeAll?: boolean },
+    ): Tool[] {
         const tools: Tool[] = [];
         for (const entry of this.entries.values()) {
             if (
                 profile === "full" ||
+                options?.includeAll === true ||
                 entry.meta.profiles.includes(profile)
             ) {
                 const resolved = this.resolveEntry(entry, ctx, onError);

@@ -526,10 +526,10 @@ export function discoverCoreTools(
 // =============================================================================
 
 /**
- * Module cache populated by discoverFromSource for synchronous access inside
- * the bundled tool factories registered during async discovery.
+ * Source module cache — populated by discoverFromSource for synchronous access
+ * inside the tool factories registered during async source-fallback discovery.
  */
-const moduleCache = new Map<string, Record<string, unknown>>();
+const sourceModuleCache = new Map<string, Record<string, unknown>>();
 
 /**
  * Async version of tool discovery that properly handles ESM dynamic imports.
@@ -588,7 +588,7 @@ async function discoverFromBundles(
         if (includeSet && !includeSet.has(entry.id)) continue;
         if (excludeSet.has(entry.id)) continue;
 
-        const { factoryModule, factoryName: catalogFactory, ...meta } = entry;
+        const { factoryModule: _factoryModule, factoryName: _factoryName, ...meta } = entry;
         const bundleInfo = manifest.entries[entry.id];
 
         if (!bundleInfo) {
@@ -692,20 +692,20 @@ async function discoverFromSource(
         // (vitest/tsx/ts-node) that can dynamically import .ts files.
         try {
             const mod = (await import(modulePath)) as Record<string, unknown>;
-            moduleCache.set(modulePath, mod);
+            sourceModuleCache.set(modulePath, mod);
             loadedCount++;
         } catch {
             failedCount++;
         }
 
         // Ghost registration: the factory is always registered regardless of
-        // whether the module loaded above. If the import failed, moduleCache
+        // whether the module loaded above. If the import failed, sourceModuleCache
         // will have no entry for this path and the factory always returns null,
         // so the tool appears in registry.list() / getCoreToolCatalog() but
         // registry.resolveAll() will silently skip it (factory → null → []).
         registry.registerFactory(
             (ctx: ToolContext) => {
-                const mod = moduleCache.get(modulePath);
+                const mod = sourceModuleCache.get(modulePath);
                 if (!mod) return null;
                 const factory = mod[factoryName];
                 if (typeof factory !== "function") return null;

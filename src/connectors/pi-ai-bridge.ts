@@ -182,7 +182,6 @@ function toModel(desc: ModelDescriptor): Model<Api> {
  */
 function toContext(ctx: StreamContext): {
     systemPrompt?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     messages: any[];
     tools?: Array<{ name: string; description: string; parameters: unknown }>;
 } {
@@ -202,7 +201,6 @@ function toContext(ctx: StreamContext): {
 
     return {
         systemPrompt: ctx.systemPrompt,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         messages: ctx.messages as any[],
         tools: ctx.tools?.map((t) => ({
             name: t.name,
@@ -254,7 +252,6 @@ function buildConnector(provider: string): Connector {
             yield* adaptEvents(
                 piStream(
                     piModel as Parameters<typeof piStream>[0],
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     piContext as any,
                     options as Parameters<typeof piStream>[2],
                 ),

@@ -115,7 +115,7 @@ export function readStringParam(
 
     const value = trim ? raw.trim() : raw;
     if (!value && !allowEmpty) {
-        if (required) throw new ToolInputError(`${label} required`);
+        if (required) throw new ToolInputError(`${label} must not be blank`);
         return undefined;
     }
 
