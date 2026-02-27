@@ -141,14 +141,16 @@ for await (const event of connector.stream(model, {
 ### `StreamContext`
 
 ```ts
-import type { UserMessage, AssistantMessage } from "clawtools";
+import type { UserMessage, AssistantMessage, ToolResultMessage } from "clawtools";
 
 interface StreamContext {
   systemPrompt?: string;
-  messages: Array<UserMessage | AssistantMessage>; // typed conversation history
+  messages: Array<UserMessage | AssistantMessage | ToolResultMessage>; // typed conversation history
   tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 ```
+
+`ToolResultMessage` (with `role: "toolResult"`) is how you feed tool execution results back into the next turn. See [messages.md](./messages.md) for the full message format.
 
 Tools in `StreamContext.tools` use `input_schema` (not `parameters`). Use `extractToolSchemas()` from `clawtools/tools` to produce this from `Tool[]` objects.
 

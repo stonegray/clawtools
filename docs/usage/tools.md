@@ -68,18 +68,23 @@ If a factory throws during resolution, that tool is silently skipped (the rest o
 
 ### Resolution
 
-#### `registry.resolveAll(ctx?)` → `Tool[]`
+#### `registry.resolveAll(ctx?, onError?)` → `Tool[]`
 
 Resolve all registered tools for the given context. Factories receive `ctx`; direct tools are returned as-is.
 
 > **Important:** Factories that throw or return `null` are **silently skipped** — the rest of the registry is unaffected and no error is raised. If a tool section you expect is missing from the result, the most likely cause is a missing or wrong context field (see the [Context requirements per section](#context-requirements-per-section) table below).
 
+Pass an `onError` callback to observe factory errors instead of having them silently swallowed:
+
 ```ts
-const tools = registry.resolveAll({
-  workspaceDir: "/my/project",
-  agentDir: "/my/project/.agent",
-  sandboxed: false,
-});
+const tools = registry.resolveAll(
+  {
+    workspaceDir: "/my/project",
+    agentDir: "/my/project/.agent",
+    sandboxed: false,
+  },
+  (meta, err) => console.warn(`[clawtools] ${meta.id} factory failed:`, err),
+);
 ```
 
 #### Context requirements per section
@@ -95,20 +100,34 @@ const tools = registry.resolveAll({
 | All others | _(none required)_ | Created with defaults; optional context fields may be used. |
 ```
 
-#### `registry.resolveByProfile(profile, ctx?)` → `Tool[]`
+#### `registry.resolveByProfile(profile, ctx?, onError?)` → `Tool[]`
 
 Resolve only tools whose metadata lists the given profile. The `"full"` profile always returns everything.
 
 ```ts
 const codingTools = registry.resolveByProfile("coding", { workspaceDir: "/proj" });
+
+// With error observer:
+const codingTools = registry.resolveByProfile(
+  "coding",
+  { workspaceDir: "/proj" },
+  (meta, err) => console.warn(`${meta.id} failed:`, err),
+);
 ```
 
-#### `registry.resolve(name, ctx?)` → `Tool | undefined`
+#### `registry.resolve(name, ctx?, onError?)` → `Tool | undefined`
 
 Resolve a single tool by canonical name.
 
 ```ts
 const readTool = registry.resolve("read", { workspaceDir: "/proj" });
+
+// With error observer:
+const readTool = registry.resolve(
+  "read",
+  { root: "/proj", bridge: createNodeBridge("/proj") },
+  (meta, err) => console.warn(`${meta.id} failed:`, err),
+);
 ```
 
 ---
@@ -321,12 +340,24 @@ Tools resolved from the registry have this signature:
 
 ```ts
 tool.execute(
-  toolCallId: string,         // unique ID for this call (use crypto.randomUUID())
+  toolCallId: string,         // ID for this call
   params: Record<string, unknown>,  // arguments from the LLM
   signal?: AbortSignal,       // optional cancellation
   onUpdate?: ToolUpdateCallback,    // optional streaming progress callback
 ): Promise<ToolResult>
 ```
+
+In an **agentic loop**, use the `id` from the `toolcall_end` event — the LLM assigns it, and feeding back a mismatched ID will break conversation history:
+
+```ts
+// Inside a toolcall_end handler:
+const result = await tool.execute(
+  event.toolCall.id,          // ← use the LLM-assigned id, NOT crypto.randomUUID()
+  event.toolCall.arguments,
+);
+```
+
+For **standalone / testing** use, `crypto.randomUUID()` is fine:
 
 ```ts
 const result = await tool.execute(
@@ -382,8 +413,6 @@ interface ToolContext {
 ```
 
 Omit any fields you don't need; all are optional.
-
-> `root` and `bridge` are required to enable the `fs` tool section (read / write / edit). Without them those tools are silently skipped. See [FsBridge](#fsbridge) below.
 
 > `root` and `bridge` are required to enable the `fs` tool section (read / write / edit). Without them those tools are silently skipped. See [FsBridge](#fsbridge) below.
 
