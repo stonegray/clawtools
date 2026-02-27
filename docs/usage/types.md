@@ -282,7 +282,19 @@ interface AssistantMessage {
 ```ts
 type ConversationMessage = UserMessage | AssistantMessage;
 ```
-A discriminated union of the two user-facing message types. For tool results use the internal `ToolResultMessage` format — see [messages.md](./messages.md).
+A discriminated union of the two user-facing message types.
+
+### `ToolResultMessage`
+```ts
+interface ToolResultMessage {
+  role: "toolResult";
+  toolCallId: string;  // matches the toolCall.id from the triggering assistant message
+  toolName: string;
+  content: Array<TextContent | ImageContent>;
+  isError: boolean;
+}
+```
+Fed back into `StreamContext.messages` after executing a tool. See [messages.md](./messages.md) for the full protocol and wrong-vs-right comparison.
 
 ---
 
@@ -292,12 +304,12 @@ A discriminated union of the two user-facing message types. For tool results use
 ```ts
 interface StreamContext {
   systemPrompt?: string;
-  messages: Array<UserMessage | AssistantMessage>;
+  messages: Array<UserMessage | AssistantMessage | ToolResultMessage>;
   tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 ```
 
-> Build the `messages` array with `UserMessage` and `AssistantMessage` objects. When feeding tool results back into the conversation, use the internal `ToolResultMessage` format — see [messages.md](./messages.md) for the full protocol.
+> Build the `messages` array with `UserMessage`, `AssistantMessage`, and `ToolResultMessage` objects. See [messages.md](./messages.md) for the full protocol.
 
 ### `StreamOptions`
 ```ts

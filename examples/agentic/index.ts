@@ -24,6 +24,7 @@ import {
     extractToolSchemas,
     type UserMessage,
     type AssistantMessage,
+    type ToolResultMessage,
 } from "../../src/index.js";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -69,16 +70,6 @@ if (!model) {
 
 // ─── Conversation history ─────────────────────────────────────────────────────
 
-// ToolResultMessage is the clawtools-internal format — NOT OpenAI's role:"tool"
-// or Anthropic's role:"user" + type:"tool_result". See docs/usage/messages.md.
-type ToolResultMessage = {
-    role: "toolResult";
-    toolCallId: string;
-    toolName: string;
-    content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
-    isError: boolean;
-};
-
 type Message = UserMessage | AssistantMessage | ToolResultMessage;
 
 const messages: Message[] = [
@@ -100,7 +91,7 @@ for (let turn = 0; turn < MAX_TURNS; turn++) {
         model,
         {
             systemPrompt: "You are a helpful assistant with access to tools.",
-            messages: messages as Array<UserMessage | AssistantMessage>,
+            messages,
             tools: toolSchemas,
         },
         {

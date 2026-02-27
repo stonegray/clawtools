@@ -78,6 +78,7 @@ export type {
     UserMessage,
     AssistantMessage,
     ConversationMessage,
+    ToolResultMessage,
 
     // Plugin types
     PluginDefinition,

@@ -358,6 +358,26 @@ export interface AssistantMessage {
 /** Union of all first-class conversation message types. */
 export type ConversationMessage = UserMessage | AssistantMessage;
 
+/**
+ * A tool result message — clawtools' internal format for feeding tool
+ * execution results back into the conversation.
+ *
+ * **This is NOT the same as OpenAI's `role: "tool"` or Anthropic's nested
+ * `role: "user"` + `type: "tool_result"` blocks.** See `docs/usage/messages.md`
+ * for the full protocol and a wrong-vs-right comparison table.
+ */
+export interface ToolResultMessage {
+    role: "toolResult";
+    /** Matches the `toolCall.id` from the assistant message that triggered this call. */
+    toolCallId: string;
+    /** The tool name (for logging/debugging; not strictly required by the connector). */
+    toolName: string;
+    /** One or more content blocks — text and/or images. */
+    content: Array<TextContent | ImageContent>;
+    /** True when the tool threw an error. */
+    isError: boolean;
+}
+
 // =============================================================================
 // Connector Definition
 // =============================================================================
@@ -374,7 +394,7 @@ export interface StreamOptions {
 /** Context for an LLM invocation. */
 export interface StreamContext {
     systemPrompt?: string;
-    messages: Array<UserMessage | AssistantMessage>;
+    messages: Array<UserMessage | AssistantMessage | ToolResultMessage>;
     tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 

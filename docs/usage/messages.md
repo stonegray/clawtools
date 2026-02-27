@@ -85,10 +85,12 @@ const msg: AssistantMessage = {
 ### `ToolResultMessage` — feeding results back
 
 After executing a tool you must feed the result back as a **tool result message**. This type
-is not exported from clawtools (it lives inside pi-ai), but you construct it as a plain object:
+is exported from clawtools and is part of the `StreamContext.messages` union:
 
 ```ts
-const toolResult = {
+import type { ToolResultMessage } from "clawtools";
+
+const toolResult: ToolResultMessage = {
   role: "toolResult" as const,        // ← NOT "tool" (OpenAI) or "user" (Anthropic)
   toolCallId: "call_abc123",          // matches the id from the toolCall block
   toolName: "read",
