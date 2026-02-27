@@ -418,8 +418,10 @@ export interface DiscoveryOptions {
  * Original source: openclaw/src/agents/tool-catalog.ts (MIT license)
  */
 const CORE_TOOL_GROUPS: Record<string, string[]> = {
-    "group:fs": ["read", "write", "edit", "apply_patch"],
-    "group:runtime": ["exec", "process"],
+    // Note: apply_patch and process exist in openclaw but require non-ToolContext
+    // factory signatures; they are not yet wired into the catalog.
+    "group:fs": ["read", "write", "edit"],
+    "group:runtime": ["exec"],
     "group:web": ["web_search", "web_fetch"],
     "group:memory": ["memory_search", "memory_get"],
     "group:sessions": [
