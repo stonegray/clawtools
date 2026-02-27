@@ -288,12 +288,16 @@ export function createClawtools(options?: ClawtoolsOptions): Clawtools {
  *
  * @example
  * ```ts
- * import { createClawtoolsAsync } from "clawtools";
+ * import { createClawtoolsAsync, createNodeBridge } from "clawtools";
  *
  * const ct = await createClawtoolsAsync();
+ * const root = process.cwd();
  *
- * // Tools are fully executable
- * const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
+ * // Tools are fully executable after awaiting
+ * const tools = ct.tools.resolveAll({
+ *   root,
+ *   bridge: createNodeBridge(root),
+ * });
  * console.log(`${tools.length} tools loaded`);
  * ```
  */
