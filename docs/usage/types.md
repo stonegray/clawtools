@@ -99,8 +99,7 @@ interface ToolContext {
 ### `FsStat`
 ```ts
 interface FsStat {
-  isFile: boolean;
-  isDirectory: boolean;
+  type: "file" | "directory" | "other";
   size: number;
   mtimeMs: number;
 }
@@ -110,20 +109,18 @@ Metadata returned by `FsBridge.stat()`.
 ### `FsBridge`
 ```ts
 interface FsBridge {
-  /** Read a file as a UTF-8 string. */
-  readFile(path: string): Promise<string>;
-  /** Write (overwrite) a file. Parent directories are created if needed. */
-  writeFile(path: string, content: string): Promise<void>;
-  /** Stat a path; returns `null` if the path does not exist. */
-  stat(path: string): Promise<FsStat | null>;
-  /** List directory entries. Each entry is a name with a trailing `/` if it is a directory. */
-  readdir(path: string): Promise<string[]>;
-  /** Remove a file. */
-  unlink(path: string): Promise<void>;
-  /** Create a directory and all parent directories. */
-  mkdir(path: string): Promise<void>;
+  /** Stat a path. Returns `null` if the path does not exist. */
+  stat(args: { filePath: string; cwd?: string }): Promise<FsStat | null>;
+  /** Read a file as a raw `Buffer`. */
+  readFile(args: { filePath: string; cwd?: string }): Promise<Buffer>;
+  /** Create a directory and all parent directories (equivalent to `mkdir -p`). */
+  mkdirp(args: { filePath: string; cwd?: string }): Promise<void>;
+  /** Write (overwrite) a file. `data` may be a string or `Buffer`. Parent dirs are NOT auto-created — call `mkdirp` first if needed. */
+  writeFile(args: { filePath: string; cwd?: string; data: string | Buffer }): Promise<void>;
 }
 ```
+
+> All paths are resolved relative to `cwd` when provided, otherwise relative to the `root` passed to `createNodeBridge`. Absolute paths are used as-is.
 
 Implement this interface to plug any filesystem backend into the `read`/`write`/`edit` tools:
 
