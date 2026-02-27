@@ -70,6 +70,12 @@ interface ClawtoolsOptions {
   // Skip auto-registration of built-in LLM provider connectors.
   // Only applies to createClawtoolsAsync(). Default: false (connectors ARE registered).
   skipBuiltinConnectors?: boolean;
+
+  // If true, begin loading tools and connectors in the background but return
+  // the Clawtools instance immediately without waiting.
+  // Await ct.ready before calling resolveAll() or streaming.
+  // Only applies to createClawtoolsAsync(). Has no effect on createClawtools().
+  lazy?: boolean;
 }
 ```
 
@@ -90,15 +96,39 @@ const ct = await createClawtoolsAsync({
 });
 ```
 
+**Example — background loading with `lazy: true`:**
+
+Use `lazy: true` when you need catalog metadata (tool names, descriptions, schemas, connector names) immediately at startup but want to defer pulling in provider SDKs until they are actually needed:
+
+```ts
+const ct = await createClawtoolsAsync({ lazy: true });
+
+// Catalog is ready immediately — list tools, filter by profile, etc.
+const meta = ct.tools.list();
+console.log(`${meta.length} tools registered`);
+
+// ... time passes, user triggers an action that needs execution ...
+
+// Wait for background loading to finish before resolving/streaming.
+await ct.ready;
+const tools = ct.tools.resolveAll({
+  root: process.cwd(),
+  bridge: createNodeBridge(process.cwd()),
+});
+```
+
+> **Note:** Calling `resolveAll()` or `connector.stream()` before `ct.ready` resolves may return stub tools that cannot execute or throw because provider SDKs have not finished loading.
+
 ---
 
 ## Return value: `Clawtools`
 
 ```ts
 interface Clawtools {
-  tools: ToolRegistry;       // see tools.md
+  tools: ToolRegistry;           // see tools.md
   connectors: ConnectorRegistry; // see connectors.md
   extensions: ExtensionInfo[];   // discovered openclaw extension metadata
+  ready: Promise<void>;          // resolves when all background loading is complete
 }
 ```
 
