@@ -164,7 +164,7 @@ export function readNumberParam(
         return undefined;
     }
 
-    const num = typeof raw === "string" ? Number(raw) : (raw as number);
+    const num = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : NaN;
     if (typeof num !== "number" || Number.isNaN(num)) {
         throw new ToolInputError(`${label} must be a number`);
     }

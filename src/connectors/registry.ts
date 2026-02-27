@@ -125,7 +125,9 @@ export class ConnectorRegistry {
      */
     getByApi(api: Api): Connector[] {
         const ids = this.apiIndex.get(api) ?? [];
-        return ids.map((id) => this.connectors.get(id)!).filter(Boolean);
+        return ids
+            .map((id) => this.connectors.get(id))
+            .filter((c): c is Connector => c !== undefined);
     }
 
     /**

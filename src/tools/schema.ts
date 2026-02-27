@@ -31,6 +31,19 @@ export function extractToolSchema(tool: Tool): {
 }
 
 /**
+ * Keywords meaningful only for specific primitive/array types that must not
+ * bleed into a wrapping object schema.
+ */
+const NON_OBJECT_KEYWORDS = new Set([
+    // string-specific
+    "minLength", "maxLength", "pattern", "format",
+    // number-specific
+    "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf",
+    // array-specific
+    "minItems", "maxItems", "uniqueItems", "items",
+]);
+
+/**
  * Normalize a parameter schema to ensure it's a valid JSON Schema object type.
  *
  * Ensures the root is always `type: "object"` with `properties`.
@@ -42,11 +55,27 @@ export function normalizeSchema(schema: unknown): Record<string, unknown> {
 
     const s = schema as Record<string, unknown>;
     if (s.type !== "object") {
-        // Spread s first so its properties are preserved, then force type=object
-        return { ...s, type: "object", properties: (s.properties as Record<string, unknown>) ?? {} };
+        // Strip keywords only meaningful for the original non-object type so
+        // they don't pollute the wrapping object schema (issue 9).
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(s)) {
+            if (!NON_OBJECT_KEYWORDS.has(key)) {
+                result[key] = value;
+            }
+        }
+        result.type = "object";
+        // Guard against non-object `properties` values such as `true` (issue 10).
+        const props = s.properties;
+        result.properties =
+            typeof props === "object" && props !== null && !Array.isArray(props)
+                ? (props as Record<string, unknown>)
+                : {};
+        return result;
     }
 
-    return s;
+    // Return a shallow copy so callers cannot mutate the stored schema in place
+    // (issue 8).
+    return { ...s };
 }
 
 /**
