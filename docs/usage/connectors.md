@@ -141,9 +141,11 @@ for await (const event of connector.stream(model, {
 ### `StreamContext`
 
 ```ts
+import type { UserMessage, AssistantMessage } from "clawtools";
+
 interface StreamContext {
   systemPrompt?: string;
-  messages: Array<Record<string, unknown>>; // LLM message objects (provider-format)
+  messages: Array<UserMessage | AssistantMessage>; // typed conversation history
   tools?: Array<{ name: string; description: string; input_schema: unknown }>;
 }
 ```
@@ -216,6 +218,60 @@ interface ResolvedAuth {
   profileId?: string;
   source?: string;    // where the key came from
   mode: AuthMode;     // "api-key" | "oauth" | "token" | "mixed" | "aws-sdk" | "unknown"
+}
+```
+
+## Connector credentials
+
+Each built-in connector auto-discovers credentials from well-known environment variables.
+For connectors that do **not** have a mapped env var, you must pass the key explicitly via
+`options.apiKey` (or `StreamOptions.apiKey`).
+
+| Provider | Auto-discover env var(s) | Notes |
+|----------|--------------------------|-------|
+| `anthropic` | `ANTHROPIC_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` | OAuth token takes precedence |
+| `openai` | `OPENAI_API_KEY` | |
+| `azure-openai-responses` | `AZURE_OPENAI_API_KEY` | |
+| `google` | `GEMINI_API_KEY` | |
+| `google-vertex` | ADC credentials file (`gcloud auth application-default login`) + `GOOGLE_CLOUD_PROJECT` + `GOOGLE_CLOUD_LOCATION` | No API key |
+| `amazon-bedrock` | `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`+`AWS_SECRET_ACCESS_KEY`, `AWS_BEARER_TOKEN_BEDROCK`, ECS/IRSA credential env vars | No API key |
+| `github-copilot` | `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` | |
+| `groq` | `GROQ_API_KEY` | |
+| `cerebras` | `CEREBRAS_API_KEY` | |
+| `xai` | `XAI_API_KEY` | |
+| `openrouter` | `OPENROUTER_API_KEY` | |
+| `vercel-ai-gateway` | `AI_GATEWAY_API_KEY` | |
+| `zai` | `ZAI_API_KEY` | |
+| `mistral` | `MISTRAL_API_KEY` | |
+| `minimax` | `MINIMAX_API_KEY` | |
+| `minimax-cn` | `MINIMAX_CN_API_KEY` | |
+| `huggingface` | `HF_TOKEN` | |
+| `opencode` | `OPENCODE_API_KEY` | |
+| `kimi-coding` | `KIMI_API_KEY` | |
+| `google-antigravity`, `google-gemini-cli`, `openai-codex` | _(none)_ | Pass `apiKey` explicitly or use `resolveAuth()` |
+
+For providers with no env var mapping, pass the key explicitly:
+
+```ts
+for await (const event of connector.stream(model, context, {
+  apiKey: "sk-my-key",  // required for providers with no env var
+})) {
+  // ...
+}
+```
+
+Or use `resolveAuth()` to centralise credential resolution:
+
+```ts
+import { resolveAuth } from "clawtools/connectors";
+
+const auth = resolveAuth("groq");
+// uses GROQ_API_KEY from env — returns undefined if not set
+
+for await (const event of connector.stream(model, context, {
+  apiKey: auth?.apiKey,
+})) {
+  // ...
 }
 ```
 
