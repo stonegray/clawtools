@@ -33,6 +33,7 @@
 import { stream as piStream, getProviders, getModels } from "@mariozechner/pi-ai";
 import type { AssistantMessageEvent, Model, Api } from "@mariozechner/pi-ai";
 import type { Connector, ModelDescriptor, StreamContext, StreamOptions, StreamEvent } from "../types.js";
+import { debugConnector } from "./debug-connector.js";
 
 // =============================================================================
 // Event adapter
@@ -102,9 +103,15 @@ async function* adaptEvents(
                 break;
 
             case "error":
+                if (ev.error === undefined) {
+                    console.warn(
+                        "[clawtools] pi-ai-bridge: received error event with unexpected shape (ev.error is undefined)",
+                        ev,
+                    );
+                }
                 yield {
                     type: "error",
-                    error: ev.error.errorMessage ?? `LLM provider error (${ev.reason})`,
+                    error: ev.error?.errorMessage ?? `LLM provider error (${ev.reason})`,
                 };
                 break;
 
@@ -179,6 +186,20 @@ function toContext(ctx: StreamContext): {
     messages: any[];
     tools?: Array<{ name: string; description: string; parameters: unknown }>;
 } {
+    // Issue 16: runtime shape check — every message must have a string `role`.
+    for (let i = 0; i < ctx.messages.length; i++) {
+        const msg = ctx.messages[i];
+        if (
+            msg === null ||
+            typeof msg !== "object" ||
+            typeof (msg as Record<string, unknown>)["role"] !== "string"
+        ) {
+            throw new TypeError(
+                `[clawtools] pi-ai-bridge: message at index ${i} is missing a required string 'role' field`,
+            );
+        }
+    }
+
     return {
         systemPrompt: ctx.systemPrompt,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -204,6 +225,11 @@ function toContext(ctx: StreamContext): {
  */
 function buildConnector(provider: string): Connector {
     const piModels = getModels(provider as Parameters<typeof getModels>[0]);
+    if (piModels.length === 0) {
+        console.warn(
+            `[clawtools] Pi-ai connector: provider '${provider}' has no models defined`,
+        );
+    }
     const modelMap = new Map<string, Model<Api>>(piModels.map((m) => [m.id, m]));
 
     return {
@@ -252,5 +278,5 @@ function buildConnector(provider: string): Connector {
  * @returns Array of connectors — one per pi-ai provider.
  */
 export function getBuiltinConnectors(): Connector[] {
-    return getProviders().map(buildConnector);
+    return [...getProviders().map(buildConnector), debugConnector];
 }
