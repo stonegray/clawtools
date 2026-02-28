@@ -624,6 +624,41 @@ export interface JsonSchema {
 export interface StreamOptions {
     temperature?: number;
     maxTokens?: number;
+    /**
+     * AbortSignal for cancelling the stream mid-flight.
+     *
+     * Pass an `AbortController.signal` here to cancel the underlying HTTP
+     * request / SSE connection at any time. When the signal fires, the
+     * connector will stop emitting events and the async iterator ends.
+     *
+     * **What happens on abort:** The stream will emit an `error` event
+     * (`{ type: "error", error: "..." }`) and then end, OR it may simply
+     * end without an error event if the underlying transport closes cleanly.
+     * Treat an aborted stream as a cancelled request — do not assume any
+     * partial content that arrived before the abort is a complete response.
+     *
+     * @example
+     * ```ts
+     * const controller = new AbortController();
+     * setTimeout(() => controller.abort(), 5_000); // cancel after 5s
+     *
+     * for await (const event of connector.stream(model, context, {
+     *   signal: controller.signal,
+     * })) {
+     *   if (event.type === "text_delta") process.stdout.write(event.delta);
+     *   if (event.type === "done") break;
+     *   if (event.type === "error") throw new Error(event.error);
+     * }
+     * ```
+     *
+     * To cancel from outside the loop:
+     * ```ts
+     * const ctrl = new AbortController();
+     * const stream = connector.stream(model, context, { signal: ctrl.signal });
+     * // ...elsewhere in your code:
+     * ctrl.abort(); // the for-await loop above will exit on the next iteration
+     * ```
+     */
     signal?: AbortSignal;
     apiKey?: string;
     headers?: Record<string, string>;
