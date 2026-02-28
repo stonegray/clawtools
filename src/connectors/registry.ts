@@ -136,6 +136,23 @@ export class ConnectorRegistry {
     }
 
     /**
+     * Iterate over all registered connectors.
+     *
+     * Makes `ConnectorRegistry` iterable so you can write:
+     * ```ts
+     * const ct = await createClawtools();
+     * for (const connector of ct.connectors) {
+     *   console.log(connector.id);
+     * }
+     * // or spread into an array:
+     * const all = [...ct.connectors];
+     * ```
+     */
+    [Symbol.iterator](): Iterator<Connector> {
+        return this.connectors.values();
+    }
+
+    /**
      * List all registered provider names.
      */
     listProviders(): string[] {

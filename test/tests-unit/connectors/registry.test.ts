@@ -136,6 +136,45 @@ describe("ConnectorRegistry", () => {
         });
     });
 
+    describe("[Symbol.iterator]", () => {
+        it("is iterable with for-of", () => {
+            registry.register(makeMockConnector({ id: "a", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "b", provider: "p2" }));
+            const ids: string[] = [];
+            for (const c of registry) {
+                ids.push(c.id);
+            }
+            expect(ids).toHaveLength(2);
+            expect(ids).toContain("a");
+            expect(ids).toContain("b");
+        });
+
+        it("spread operator works", () => {
+            registry.register(makeMockConnector({ id: "x", provider: "px" }));
+            const arr = [...registry];
+            expect(arr).toHaveLength(1);
+            expect(arr[0].id).toBe("x");
+        });
+
+        it("empty registry yields no items", () => {
+            expect([...registry]).toHaveLength(0);
+        });
+
+        it("iteration order matches registration order", () => {
+            registry.register(makeMockConnector({ id: "first", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "second", provider: "p2" }));
+            registry.register(makeMockConnector({ id: "third", provider: "p3" }));
+            const ids = [...registry].map((c) => c.id);
+            expect(ids).toEqual(["first", "second", "third"]);
+        });
+
+        it("Array.from() works", () => {
+            registry.register(makeMockConnector({ id: "a", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "b", provider: "p2" }));
+            expect(Array.from(registry)).toHaveLength(2);
+        });
+    });
+
     describe("listProviders", () => {
         it("returns registered provider names", () => {
             registry.register(makeMockConnector({ id: "a", provider: "anthropic" }));
