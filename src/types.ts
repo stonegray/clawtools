@@ -659,10 +659,28 @@ export interface Connector {
     provider: string;
     /** API transport protocol. */
     api: Api;
-    /** Available models for this connector. */
-    models?: ModelDescriptor[];
+    /**
+     * Available models for this connector.
+     *
+     * Every built-in connector ships with a populated model list. For
+     * connectors that fetch their model catalog dynamically (e.g. from a
+     * remote registry), implement {@link listModels} and set this to an
+     * empty array as the initial value.
+     */
+    models: ModelDescriptor[];
     /** Environment variable names for API key resolution. */
     envVars?: string[];
+    /**
+     * Fetch the connector's full model catalog asynchronously.
+     *
+     * Implement this method on connectors whose model list may change at
+     * runtime or must be fetched from a remote API (e.g. a self-hosted LLM
+     * registry). When present, callers should prefer `listModels()` over
+     * the static `models` array for up-to-date data.
+     *
+     * If absent, consumers fall back to the static `models` array.
+     */
+    listModels?: () => Promise<ModelDescriptor[]>;
 
     /**
      * Stream a response from the LLM.
