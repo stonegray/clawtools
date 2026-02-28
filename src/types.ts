@@ -332,15 +332,127 @@ export interface UsageInfo {
     outputTokens?: number;
 }
 
-/** Events emitted during an LLM streaming response. */
+/**
+ * Events emitted by a {@link Connector} during a single LLM streaming turn.
+ *
+ * ## Stream Protocol
+ *
+ * ### Guaranteed events (always present)
+ *
+ * - **`start`** — Always the first event. Signals that the HTTP connection is
+ *   established and streaming has begun.
+ * - **`done`** — Always the last event on a _successful_ turn. Contains the
+ *   terminal `stopReason` and optional token-usage data. After `done` the
+ *   async iterator ends.
+ * - **`error`** — Replaces `done` when the provider returns a stream-level
+ *   error. After `error` the async iterator ends. `done` is **not** also
+ *   emitted in this case.
+ *
+ * ### Text events (provider-dependent)
+ *
+ * - **`text_delta`** — Incremental text token. Accumulate these to build the
+ *   full response string.
+ * - **`text_end`** — Emitted once when a text block finishes. The `content`
+ *   field equals the full accumulated text. Treating `text_end` as an
+ *   alternative to accumulating `text_delta`s is valid, but `text_end` is not
+ *   always emitted — in particular, some providers may end a text block with a
+ *   `toolcall_start` without a preceding `text_end`. Always accumulate
+ *   `text_delta`s as the primary signal.
+ *
+ * ### Thinking events (provider-dependent)
+ *
+ * Same semantics as text events but for reasoning/thinking blocks. Only
+ * emitted by providers/models that support extended thinking (see
+ * `ModelDescriptor.reasoning`).
+ *
+ * - **`thinking_delta`** — Incremental thinking token.
+ * - **`thinking_end`** — Full accumulated thinking content.
+ *
+ * ### Tool-call events
+ *
+ * Tool calls are streamed in three phases:
+ *
+ * 1. **`toolcall_start`** — A new tool call has begun. The optional `id`
+ *    field is populated when the provider reveals the call ID at the start of
+ *    the call (e.g. Anthropic). If absent, the ID is only available at
+ *    `toolcall_end`.
+ * 2. **`toolcall_delta`** — Incremental JSON fragment of the tool arguments.
+ *    The optional `id` mirrors the id from the corresponding `toolcall_start`
+ *    when the provider supports it.
+ * 3. **`toolcall_end`** — The tool call is complete. `toolCall.id`,
+ *    `toolCall.name`, and `toolCall.arguments` are fully resolved here.
+ *
+ * **Multiple concurrent tool calls:** Some providers (e.g. Anthropic with
+ * parallel tool use) may interleave events for multiple tool calls in the same
+ * stream. Use the `id` fields on `toolcall_start` / `toolcall_delta` to
+ * correlate delta fragments to the correct call.
+ *
+ * ### Tool-use loop pattern
+ *
+ * When `done.stopReason === "toolUse"` the LLM expects tool results to be fed
+ * back. Collect all `toolcall_end` events from the stream, execute the tools,
+ * then add a `ToolResultMessage` for each result to the conversation and call
+ * `connector.stream()` again:
+ *
+ * ```ts
+ * const toolCalls: { id: string; name: string; arguments: Record<string, unknown> }[] = [];
+ * for await (const event of connector.stream(model, context, options)) {
+ *   if (event.type === "text_delta") process.stdout.write(event.delta);
+ *   if (event.type === "toolcall_end") toolCalls.push(event.toolCall);
+ *   if (event.type === "done" && event.stopReason === "toolUse") {
+ *     // Execute tools and build tool-result messages...
+ *   }
+ *   if (event.type === "error") throw new Error(event.error);
+ * }
+ * ```
+ *
+ * ### Usage data
+ *
+ * `done.usage` is populated by providers that report token counts. When absent
+ * it means the provider does not expose usage data for this call — treat it as
+ * unavailable, not as zero. The built-in pi-ai bridge always populates usage
+ * for Anthropic, OpenAI, and Google providers. The debug connector always
+ * populates usage with a rough token estimate.
+ *
+ * ### `stopReason: "error"` on `done`
+ *
+ * A `done` event with `stopReason: "error"` indicates the provider terminated
+ * the stream with a non-exception error condition (e.g. a content-policy
+ * refusal that produces a stop reason but no exception). This is distinct from
+ * the `error` event, which signals an exception in the stream pipeline. When
+ * `stopReason: "error"` is received without a preceding `error` event, treat
+ * it as an empty response with no recoverable content. A preceding `error`
+ * event is **not** guaranteed in this case.
+ */
 export type StreamEvent =
     | { type: "start" }
     | { type: "text_delta"; delta: string }
     | { type: "text_end"; content: string }
     | { type: "thinking_delta"; delta: string }
     | { type: "thinking_end"; content: string }
-    | { type: "toolcall_start" }
-    | { type: "toolcall_delta"; delta: string }
+    | {
+        type: "toolcall_start";
+        /**
+         * The tool-call ID, if available at stream-start time.
+         *
+         * Populated by connectors that receive the ID before the argument
+         * stream begins (e.g. Anthropic). May be `undefined` for providers
+         * that only resolve the ID at `toolcall_end`.
+         */
+        id?: string;
+    }
+    | {
+        type: "toolcall_delta";
+        delta: string;
+        /**
+         * The tool-call ID this delta belongs to.
+         *
+         * Mirrors the `id` from the corresponding `toolcall_start` event.
+         * Useful for correlating deltas when multiple tool calls are in-flight
+         * in the same stream (e.g. Anthropic parallel tool use).
+         */
+        id?: string;
+    }
     | {
         type: "toolcall_end";
         toolCall: {

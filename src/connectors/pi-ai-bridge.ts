@@ -21,7 +21,7 @@
  * | thinking_start           | (skipped — no content) |
  * | thinking_delta           | thinking_delta         |
  * | thinking_end             | thinking_end           |
- * | toolcall_start           | toolcall_start         |
+ * | toolcall_start           | toolcall_start (+ id?) |
  * | toolcall_delta           | toolcall_delta         |
  * | toolcall_end             | toolcall_end           |
  * | done                     | done (with usage)      |
@@ -43,9 +43,10 @@ import { debugConnector } from "./debug-connector.js";
  * Adapt an async iterable of pi-ai `AssistantMessageEvent`s into clawtools
  * `StreamEvent`s.
  *
- * `text_start`, `thinking_start`, and `toolcall_start` (the positional kind)
- * carry no content yet, so they are suppressed — the corresponding `_delta` /
- * `_end` events provide all the data the consumer needs.
+ * `text_start` and `thinking_start` carry no content, so they are suppressed
+ * — the corresponding `_delta` / `_end` events provide all the data the
+ * consumer needs. `toolcall_start` is forwarded (with the optional `id` when
+ * the provider makes it available at call-start time).
  */
 async function* adaptEvents(
     events: AsyncIterable<AssistantMessageEvent>,
@@ -72,13 +73,39 @@ async function* adaptEvents(
                 yield { type: "thinking_end", content: ev.content };
                 break;
 
-            case "toolcall_start":
-                yield { type: "toolcall_start" };
+            case "toolcall_start": {
+                // Extract the tool call id from the partial message when available.
+                // The id is set on the toolCall block at content_block_start time by
+                // Anthropic (and similar providers), so it is available before any deltas.
+                const partialContent = ev.partial?.content;
+                const toolCallBlock = Array.isArray(partialContent)
+                    ? partialContent[ev.contentIndex]
+                    : undefined;
+                const startId =
+                    toolCallBlock && "id" in toolCallBlock && typeof toolCallBlock.id === "string"
+                        ? toolCallBlock.id
+                        : undefined;
+                yield startId !== undefined
+                    ? { type: "toolcall_start", id: startId }
+                    : { type: "toolcall_start" };
                 break;
+            }
 
-            case "toolcall_delta":
-                yield { type: "toolcall_delta", delta: ev.delta };
+            case "toolcall_delta": {
+                // Mirror the id from toolcall_start so consumers can correlate deltas.
+                const deltaContent = ev.partial?.content;
+                const deltaBlock = Array.isArray(deltaContent)
+                    ? deltaContent[ev.contentIndex]
+                    : undefined;
+                const deltaId =
+                    deltaBlock && "id" in deltaBlock && typeof deltaBlock.id === "string"
+                        ? deltaBlock.id
+                        : undefined;
+                yield deltaId !== undefined
+                    ? { type: "toolcall_delta", delta: ev.delta, id: deltaId }
+                    : { type: "toolcall_delta", delta: ev.delta };
                 break;
+            }
 
             case "toolcall_end":
                 yield {
