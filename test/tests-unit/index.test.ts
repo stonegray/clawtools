@@ -78,6 +78,7 @@ describe("createClawtoolsSync", () => {
                 label: "Post-create",
                 provider: "post-create",
                 api: "openai-completions",
+                models: [],
                 async *stream() {
                     yield { type: "done", stopReason: "stop" };
                 },

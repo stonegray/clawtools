@@ -15,7 +15,14 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "clawtools": ["./src/index.ts"],
+      "clawtools/tools": ["./src/tools/index.ts"],
+      "clawtools/connectors": ["./src/connectors/index.ts"],
+      "clawtools/plugins": ["./src/plugins/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests", "openclaw"]

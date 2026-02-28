@@ -42,6 +42,7 @@ describe("custom connector lifecycle", () => {
             label: "Echo Connector",
             provider: "echo",
             api: "openai-completions",
+            models: [],
             async *stream(_model, context, _options) {
                 yield { type: "start" };
                 const lastMsg = context.messages[context.messages.length - 1];
@@ -86,6 +87,7 @@ describe("custom connector lifecycle", () => {
             label: "Test Anthropic",
             provider: "anthropic",
             api: "anthropic-messages",
+            models: [],
             async *stream() {
                 yield { type: "done", stopReason: "stop" };
             },
@@ -96,6 +98,7 @@ describe("custom connector lifecycle", () => {
             label: "Test OpenAI",
             provider: "openai",
             api: "openai-completions",
+            models: [],
             async *stream() {
                 yield { type: "done", stopReason: "stop" };
             },

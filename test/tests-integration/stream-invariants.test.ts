@@ -309,6 +309,7 @@ function makeScConnector(events: StreamEvent[]): Connector {
         label: "Self-Contained Connector",
         provider: "self-contained",
         api: "openai-completions",
+        models: [],
         async *stream(_model, _ctx, _opts) {
             for (const ev of events) yield ev;
         },

@@ -9,7 +9,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
     createClawtoolsSync,
     createClawtools,
-    ToolRegistry,
     jsonResult,
     textResult,
     errorResult,
@@ -20,7 +19,7 @@ import {
     extractToolSchemas,
     ToolInputError,
 } from "clawtools";
-import type { Tool, ToolContext, ToolFactory, ToolResult } from "clawtools";
+import type { Tool, ToolContext, ToolFactory } from "clawtools";
 
 // ---------------------------------------------------------------------------
 // Custom tool registration + execution

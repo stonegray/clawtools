@@ -32,7 +32,7 @@
 
 import { stream as piStream, getProviders, getModels } from "@mariozechner/pi-ai";
 import type { AssistantMessageEvent, Model, Api } from "@mariozechner/pi-ai";
-import type { Connector, StreamContext, StreamEvent } from "../types.js";
+import type { Connector, ModelDescriptor, StreamContext, StreamEvent } from "../types.js";
 import { debugConnector } from "./debug-connector.js";
 
 // =============================================================================
@@ -219,7 +219,7 @@ function toContext(ctx: StreamContext): {
         if (
             msg === null ||
             typeof msg !== "object" ||
-            typeof (msg as Record<string, unknown>)["role"] !== "string"
+            typeof (msg as unknown as Record<string, unknown>)["role"] !== "string"
         ) {
             throw new TypeError(
                 `[clawtools] pi-ai-bridge: message at index ${i} is missing a required string 'role' field`,

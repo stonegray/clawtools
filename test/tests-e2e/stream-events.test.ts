@@ -25,6 +25,7 @@ function createEventConnector(events: StreamEvent[]): Connector {
         label: "Event Test",
         provider: "event-test",
         api: "openai-completions",
+        models: [],
         async *stream() {
             for (const event of events) {
                 yield event;

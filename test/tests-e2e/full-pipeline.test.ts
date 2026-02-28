@@ -201,6 +201,7 @@ describe("createClawtools integration", { timeout: 180_000 }, () => {
             label: "Mock Pipeline",
             provider: "mock-pipeline",
             api: "openai-completions",
+            models: [],
             async *stream(_model, context, _options) {
                 yield { type: "start" };
                 yield { type: "text_delta", delta: "pipeline works!" };

@@ -21,7 +21,7 @@ import type { Tool } from "../types.js";
 export function extractToolSchema(tool: Tool): {
     name: string;
     description: string;
-    input_schema: unknown;
+    input_schema: Record<string, unknown>;
 } {
     return {
         name: tool.name,
@@ -157,7 +157,7 @@ function deepClean(
 export function extractToolSchemas(
     tools: Tool[],
     providerOrApi?: string,
-): Array<{ name: string; description: string; input_schema: unknown }> {
+): Array<{ name: string; description: string; input_schema: Record<string, unknown> }> {
     return tools.map((tool) => {
         const schema = extractToolSchema(tool);
         if (

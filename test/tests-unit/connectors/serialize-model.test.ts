@@ -26,7 +26,7 @@ describe("serializeModel", () => {
             baseUrl: "https://api.openai.com/v1",
         });
         expect(result.base_url).toBe("https://api.openai.com/v1");
-        expect((result as Record<string, unknown>).baseUrl).toBeUndefined();
+        expect((result as unknown as Record<string, unknown>).baseUrl).toBeUndefined();
     });
 
     it("maps contextWindow → context_window", () => {
@@ -37,7 +37,7 @@ describe("serializeModel", () => {
             contextWindow: 128_000,
         });
         expect(result.context_window).toBe(128_000);
-        expect((result as Record<string, unknown>).contextWindow).toBeUndefined();
+        expect((result as unknown as Record<string, unknown>).contextWindow).toBeUndefined();
     });
 
     it("maps maxTokens → max_tokens", () => {
@@ -48,7 +48,7 @@ describe("serializeModel", () => {
             maxTokens: 4096,
         });
         expect(result.max_tokens).toBe(4096);
-        expect((result as Record<string, unknown>).maxTokens).toBeUndefined();
+        expect((result as unknown as Record<string, unknown>).maxTokens).toBeUndefined();
     });
 
     it("maps cost.cacheRead → cost.cache_read and cost.cacheWrite → cost.cache_write", () => {
@@ -131,7 +131,7 @@ describe("deserializeModel", () => {
             base_url: "https://api.openai.com/v1",
         });
         expect(result.baseUrl).toBe("https://api.openai.com/v1");
-        expect((result as Record<string, unknown>).base_url).toBeUndefined();
+        expect((result as unknown as Record<string, unknown>).base_url).toBeUndefined();
     });
 
     it("maps context_window → contextWindow", () => {
