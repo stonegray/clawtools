@@ -74,6 +74,7 @@ export type {
     ProviderConfig,
     AuthMode,
     ResolvedAuth,
+    JsonSchema,
     StreamEvent,
     StreamOptions,
     StreamContext,

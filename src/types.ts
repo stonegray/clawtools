@@ -530,6 +530,42 @@ export interface ToolResultMessage {
 // Connector Definition
 // =============================================================================
 
+/**
+ * A minimal JSON Schema object suitable for describing LLM tool input schemas.
+ *
+ * This covers the common subset used when passing tool definitions to LLM
+ * providers via {@link StreamContext}. The `type` field is required for
+ * top-level schemas (typically `"object"`). All other fields are optional so
+ * that simple schemas (`{}`, `{ type: "string" }`) and complex ones
+ * (`$defs`, `anyOf`, …) are equally accepted.
+ *
+ * @example
+ * ```ts
+ * const schema: JsonSchema = {
+ *   type: "object",
+ *   properties: {
+ *     message: { type: "string", description: "Text to echo" },
+ *   },
+ *   required: ["message"],
+ * };
+ * ```
+ */
+export interface JsonSchema {
+    type?: string;
+    properties?: Record<string, JsonSchema>;
+    items?: JsonSchema;
+    required?: string[];
+    description?: string;
+    enum?: unknown[];
+    const?: unknown;
+    anyOf?: JsonSchema[];
+    oneOf?: JsonSchema[];
+    allOf?: JsonSchema[];
+    $ref?: string;
+    $defs?: Record<string, JsonSchema>;
+    [key: string]: unknown;
+}
+
 /** Options passed to a connector's stream function. */
 export interface StreamOptions {
     temperature?: number;
@@ -543,7 +579,15 @@ export interface StreamOptions {
 export interface StreamContext {
     systemPrompt?: string;
     messages: Array<UserMessage | AssistantMessage | ToolResultMessage>;
-    tools?: Array<{ name: string; description: string; input_schema: unknown }>;
+    /**
+     * Tool definitions to include in this invocation.
+     *
+     * Each tool's `input_schema` should be a JSON Schema object (or a TypeBox
+     * schema, which compiles to JSON Schema). Use the {@link JsonSchema}
+     * interface for type-safe construction, or `Record<string, unknown>` when
+     * passing through an opaque schema from an external source.
+     */
+    tools?: Array<{ name: string; description: string; input_schema: JsonSchema | Record<string, unknown> }>;
 }
 
 /**
