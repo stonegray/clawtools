@@ -13,8 +13,8 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import {
+    createClawtoolsSync,
     createClawtools,
-    createClawtoolsAsync,
     jsonResult,
     textResult,
     extractToolSchemas,
@@ -129,7 +129,7 @@ describe("multi-turn conversation simulation", () => {
 
 describe("schema extraction in pipeline", () => {
     it("tools resolved from registry produce valid schemas for LLM", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.tools.register({
             name: "weather",
@@ -188,9 +188,9 @@ describe("schema extraction in pipeline", () => {
 // createClawtoolsAsync full integration
 // ---------------------------------------------------------------------------
 
-describe("createClawtoolsAsync integration", { timeout: 180_000 }, () => {
+describe("createClawtools integration", { timeout: 180_000 }, () => {
     it("loads core tools, adds custom connector, and streams through mock", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
 
         // Should have 23 core tools
         expect(ct.tools.size).toBe(23);
@@ -228,7 +228,7 @@ describe("createClawtoolsAsync integration", { timeout: 180_000 }, () => {
     });
 
     it("core tools have valid schemas extractable for LLM use", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         const tools = ct.tools.resolveAll({ workspaceDir: process.cwd() });
         const schemas = extractToolSchemas(tools);
 
@@ -249,8 +249,8 @@ describe("createClawtoolsAsync integration", { timeout: 180_000 }, () => {
 // ---------------------------------------------------------------------------
 
 describe("extension discovery in pipeline", () => {
-    it("createClawtools discovers openclaw extensions", () => {
-        const ct = createClawtools({ skipCoreTools: true });
+    it("createClawtoolsSync discovers openclaw extensions", () => {
+        const ct = createClawtoolsSync({ skipCoreTools: true });
         // Extensions come from the openclaw submodule
         expect(Array.isArray(ct.extensions)).toBe(true);
         // The openclaw submodule has extensions/ with plugin manifests

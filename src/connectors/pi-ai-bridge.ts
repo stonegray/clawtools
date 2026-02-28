@@ -5,7 +5,7 @@
  * This module is **not imported at runtime directly**. It is compiled and
  * bundled at build time (via `scripts/bundle-core-connectors.mjs`) into
  * `dist/core-connectors/builtins.js` with all provider SDKs and pi-ai code
- * inlined. At runtime, `discoverBuiltinConnectorsAsync()` dynamically imports
+ * inlined. At runtime, `discoverBuiltinConnectors()` dynamically imports
  * that bundle.
  *
  * ## Event mapping

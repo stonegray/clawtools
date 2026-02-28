@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { createClawtools } from "clawtools";
+import { createClawtoolsSync } from "clawtools";
 import type {
     StreamEvent,
     ModelDescriptor,
@@ -261,7 +261,7 @@ describe("full event sequence", () => {
 
 describe("events via ConnectorRegistry", () => {
     it("connector registered in registry streams events correctly", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register(
             createEventConnector([

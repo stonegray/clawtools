@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-    createClawtools,
+    createClawtoolsSync,
     ConnectorRegistry,
     resolveAuth,
 } from "clawtools";
@@ -35,7 +35,7 @@ async function drain<T>(iter: AsyncIterable<T>): Promise<T[]> {
 
 describe("custom connector lifecycle", () => {
     it("registers a connector and streams a text response", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register({
             id: "echo-conn",
@@ -79,7 +79,7 @@ describe("custom connector lifecycle", () => {
     });
 
     it("lookup by provider and api transport", () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register({
             id: "test-anthropic",
@@ -217,7 +217,7 @@ describe("connector streaming via mock server", () => {
 
 describe("connector + tool execution e2e", () => {
     it("stream a tool call, then execute the tool, verify result", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         // Register a custom tool
         let toolExecuted = false;

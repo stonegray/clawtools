@@ -155,7 +155,7 @@ export interface FsStat {
  * ```ts
  * import { createNodeBridge } from "clawtools/tools";
  *
- * const ct = await createClawtoolsAsync();
+ * const ct = await createClawtools();
  * const tools = ct.tools.resolveAll({
  *   workspaceDir: "/my/project",
  *   root: "/my/project",

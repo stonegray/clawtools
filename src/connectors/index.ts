@@ -27,6 +27,7 @@
 export { ConnectorRegistry, resolveAuth, type AuthResolver } from "./registry.js";
 export {
     discoverExtensions,
+    discoverBuiltinConnectors,
     discoverBuiltinConnectorsAsync,
     getExtensionPath,
     listChannelExtensions,

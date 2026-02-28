@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
-    createClawtools,
+    createClawtoolsSync,
     loadPlugins,
 } from "clawtools";
 import type { Tool, Connector } from "clawtools";
@@ -58,7 +58,7 @@ describe("plugin tool execution", () => {
 
     it("registers plugin tools into a ToolRegistry and resolves them", async () => {
         const plugin = await loadTestPlugin("echo-plugin");
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         for (const tool of plugin!.tools) {
             ct.tools.register(tool, { source: "plugin", pluginId: plugin!.id });
@@ -108,7 +108,7 @@ describe("plugin connector streaming", () => {
 
     it("registers plugin connectors into a ConnectorRegistry", async () => {
         const plugin = await loadTestPlugin("echo-plugin");
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         for (const connector of plugin!.connectors) {
             ct.connectors.register(connector);
