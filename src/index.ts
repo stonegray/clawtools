@@ -129,6 +129,8 @@ export type {
 export {
     ConnectorRegistry,
     resolveAuth,
+    serializeModel,
+    deserializeModel,
     discoverExtensions,
     discoverBuiltinConnectors,
     discoverBuiltinConnectorsAsync,
@@ -136,7 +138,7 @@ export {
     listChannelExtensions,
     listProviderExtensions,
 } from "./connectors/index.js";
-export type { AuthResolver, ExtensionInfo } from "./connectors/index.js";
+export type { AuthResolver, ExtensionInfo, SerializedModel } from "./connectors/index.js";
 
 // =============================================================================
 // Re-exports: Plugin system

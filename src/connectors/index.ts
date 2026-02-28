@@ -24,7 +24,7 @@
  * @module
  */
 
-export { ConnectorRegistry, resolveAuth, type AuthResolver } from "./registry.js";
+export { ConnectorRegistry, resolveAuth, serializeModel, deserializeModel, type AuthResolver, type SerializedModel } from "./registry.js";
 export {
     discoverExtensions,
     discoverBuiltinConnectors,
