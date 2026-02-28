@@ -286,4 +286,19 @@ describe("resolveAuth", () => {
             delete process.env._MODE_TEST_API_KEY;
         }
     });
+
+    it("mode=api-key variant has apiKey and source as non-optional strings", () => {
+        const auth = resolveAuth("anthropic", [], "my-key");
+        expect(auth).toBeDefined();
+        // Type narrowing: once mode === "api-key", apiKey and source are required strings
+        if (auth && auth.mode === "api-key") {
+            // TypeScript should accept these as string (not string | undefined)
+            const key: string = auth.apiKey;
+            const src: string = auth.source;
+            expect(key).toBe("my-key");
+            expect(src).toBe("explicit");
+        } else {
+            throw new Error("Expected mode=api-key");
+        }
+    });
 });

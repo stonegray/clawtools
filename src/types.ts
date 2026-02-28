@@ -309,13 +309,67 @@ export type AuthMode =
     | "aws-sdk"
     | "unknown";
 
-/** Resolved authentication for a provider call. */
-export interface ResolvedAuth {
-    apiKey?: string;
-    profileId?: string;
-    source?: string;
-    mode: AuthMode;
-}
+/**
+ * Resolved authentication for a provider call.
+ *
+ * This is a discriminated union on `mode`. Each variant carries only the
+ * fields that are meaningful for that authentication mechanism:
+ *
+ * - **`"api-key"`** — `apiKey` is always present. `source` indicates where
+ *   the key was found (`"explicit"`, `"env:<VAR_NAME>"`, etc.).
+ * - **`"aws-sdk"`** — No API key. Credentials come from the AWS SDK credential
+ *   chain (environment, `~/.aws/credentials`, IAM role, etc.). `profileId` is
+ *   optionally set to the named AWS profile.
+ * - **`"oauth"`** / **`"token"`** — Token-based auth; `apiKey` carries the
+ *   bearer token.
+ * - **`"none"`** — No authentication required.
+ * - **`"mixed"`** / **`"unknown"`** — Fallback variants for providers with
+ *   complex or undetermined auth requirements.
+ *
+ * @example Narrowing by mode:
+ * ```ts
+ * const auth = resolveAuth("anthropic", connector.envVars);
+ * if (auth?.mode === "api-key") {
+ *   // auth.apiKey is guaranteed to be a non-empty string here
+ *   headers["x-api-key"] = auth.apiKey;
+ * }
+ * ```
+ */
+export type ResolvedAuth =
+    | {
+        mode: "api-key";
+        /** The resolved API key (always present for this mode). */
+        apiKey: string;
+        /** Where the key was found: `"explicit"`, `"env:<VAR_NAME>"`, etc. */
+        source: string;
+        profileId?: undefined;
+    }
+    | {
+        mode: "aws-sdk";
+        /** Named AWS profile, if applicable. */
+        profileId?: string;
+        apiKey?: undefined;
+        source?: undefined;
+    }
+    | {
+        mode: "oauth" | "token";
+        /** Bearer token. */
+        apiKey: string;
+        source: string;
+        profileId?: undefined;
+    }
+    | {
+        mode: "none";
+        apiKey?: undefined;
+        source?: undefined;
+        profileId?: undefined;
+    }
+    | {
+        mode: "mixed" | "unknown";
+        apiKey?: string;
+        source?: string;
+        profileId?: string;
+    };
 
 // =============================================================================
 // Stream Event Types
