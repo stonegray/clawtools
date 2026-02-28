@@ -6,13 +6,12 @@
  * and error handling.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
     createClawtoolsSync,
-    ConnectorRegistry,
     resolveAuth,
 } from "clawtools";
-import type { Connector, ModelDescriptor, StreamContext, StreamEvent } from "clawtools";
+import type { ModelDescriptor, StreamContext } from "clawtools";
 import { withMockServer } from "../helpers/index.js";
 import { createTestApp } from "../testapp/index.js";
 

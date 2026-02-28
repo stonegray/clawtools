@@ -256,8 +256,8 @@ describe("schema extraction e2e", () => {
         const schema = extractToolSchema(tool);
         expect(schema.name).toBe("search");
         expect(schema.description).toBe("Search for things");
-        expect((schema.input_schema as Record<string, unknown>).type).toBe("object");
-        const props = (schema.input_schema as Record<string, unknown>).properties as Record<string, unknown>;
+        expect(schema.input_schema.type).toBe("object");
+        const props = schema.input_schema.properties as Record<string, unknown>;
         expect(props.query).toBeDefined();
         expect(props.limit).toBeDefined();
     });
