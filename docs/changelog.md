@@ -24,24 +24,20 @@ Test suite: 552 tests across 21 files (up from ~307 at v0.1.0).
   exported from `clawtools`; `StreamContext.messages` accepts the union.
 - **`serializeModel()` / `deserializeModel()`** — lossless camelCase↔snake_case
   conversion for persisting `ModelDescriptor` to databases or REST APIs.
-- **`JsonSchema` interface** — typed `StreamContext.tools[].input_schema`.
 - **`extractToolSchema()` / `extractToolSchemas()`** — convert resolved tools
   into LLM-consumable function-call schemas with Gemini compatibility cleaning.
 - **`resolveAuth()` discriminated union** — `ResolvedAuth` now distinguishes
   `api-key` vs future auth modes; `apiKey` is required when `mode === "api-key"`.
 - **`ConnectorRegistry` iterable** — `for (const c of registry)` works via
-  `Symbol.iterator`, plus `listProviders()`, `getByApi()`.
-- **`Connector.models` required** — was optional; now required (empty array for
-  dynamic-only connectors). Added optional `listModels()` for runtime catalogs.
-- **`onError` callback** — `resolveAll()`, `resolveByProfile()`, and `resolve()`
-  accept `onError` to handle factory failures without swallowing them silently.
-- **`readBooleanParam()` `required` option** — parity with string/number.
-- **Abort signal support** — `StreamOptions.signal` forwarded to `fetch` for
-  mid-stream cancellation.
-- **Stream event JSDoc** — every `StreamEvent` variant documented; `toolcall_start`
-  and `toolcall_delta` gain optional `id` field.
-- **Comprehensive test suite** — 552 tests covering unit, integration, E2E, build
-  verification, stream-event invariants, and signal/abort behavior.
+  `Symbol.iterator`.
+- **`Connector.models` required** — required now, plus optional `listModels()` for
+  dynamic catalogs.
+- **`onError` callback** — `resolveAll()`/`resolveByProfile()`/`resolve()` accept
+  an `onError` handler for factory failures.
+- **Stream event JSDoc** — every variant documented; `toolcall_start` and
+  `toolcall_delta` gain optional `id` field.
+- **Abort signal support** — `StreamOptions.signal` cancels mid-stream.
+
 
 ### Changed
 
