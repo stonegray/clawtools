@@ -1,6 +1,6 @@
 {
   "name": "@stonegray/clawtools",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Platform-agnostic adapter exposing OpenClaw tools and connectors to third-party software",
   "type": "module",
   "main": "./dist/index.js",
