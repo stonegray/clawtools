@@ -12,14 +12,14 @@ Requires **Node.js ≥ 22**.
 
 ## Two entry functions
 
-### `createClawtools(options?)` — sync, metadata-only
+### `createClawtoolsSync(options?)` — sync, metadata-only
 
 Returns immediately. Core tool factories are registered but **will not execute** — `resolveAll()` returns tools whose `execute` methods do nothing (the underlying modules have not been dynamically imported). Use this when you only need the catalog (names, descriptions, schemas, profiles).
 
 ```ts
-import { createClawtools } from "clawtools";
+import { createClawtoolsSync } from "clawtools";
 
-const ct = createClawtools();
+const ct = createClawtoolsSync();
 
 for (const meta of ct.tools.list()) {
   console.log(`${meta.id}: ${meta.description}`);

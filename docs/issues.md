@@ -14,7 +14,7 @@ lazy factory stubs, but the factories always return `null` at call time because
 ESM dynamic `import()` is inherently asynchronous. Calling `resolveAll()` on a
 registry populated by `discoverCoreTools()` returns empty tools.
 
-**Workaround:** Use `discoverCoreToolsAsync()` or `createClawtoolsAsync()` to
+**Workaround:** Use `discoverCoreToolsAsync()` or `createClawtools()` to
 load pre-built bundles; then `resolveAll()` works normally.
 
 The sync function is kept for catalog/metadata-only use-cases (listing tools,
@@ -23,16 +23,16 @@ never called.
 
 ---
 
-## 2. `createClawtools()` produces non-executable tools
+## 2. `createClawtoolsSync()` produces non-executable tools
 
 **Status:** By design — documented in JSDoc.
 
-The synchronous `createClawtools()` convenience function internally calls
+The synchronous `createClawtoolsSync()` convenience function internally calls
 `discoverCoreTools()`, which means `ct.tools.resolveAll()` returns tools whose
 `execute` methods throw (wrapped to return `null`). The companion async function
-`createClawtoolsAsync()` is the correct path for executable tools.
+`createClawtools()` is the correct path for executable tools.
 
-**Workaround:** Replace `createClawtools()` with `await createClawtoolsAsync()`.
+**Workaround:** Replace `createClawtoolsSync()` with `await createClawtools()`.
 
 ---
 
@@ -55,14 +55,14 @@ When `resolveAll()` is called with an empty context (`{}`), these three return
 
 **Usage — memory tools:**
 ```ts
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const tools = ct.tools.resolveAll({ config: {} });
 // → memory_search and memory_get are included
 ```
 
 **Usage — image tool:**
 ```ts
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const tools = ct.tools.resolveAll({
   agentDir: "/path/to/agent",
   config: { agents: { defaults: { imageModel: "openai/gpt-4o" } } },
@@ -117,7 +117,7 @@ variable `VITEST_TEST_TIMEOUT=120000` or increase the `beforeAll` timeout in
 `act` defaults to `node:16-buster-slim` when the workflow requests
 `ubuntu-latest`, which is Node 16 rather than the GitHub-hosted Node 22. This
 causes `npm ci` to install a different package set than the real CI. The actual
-GitHub Actions workflows run on `ubuntu-latest` with Node 18/20/22 as specified.
+GitHub Actions workflows run on `ubuntu-latest` with Node 22/24 as specified.
 
 Running `act` with `--platform ubuntu-latest=catthehacker/ubuntu:act-22.04` uses
 a closer image but requires a larger container pull.
@@ -128,7 +128,7 @@ a closer image but requires a larger container pull.
 
 **Status:** By design — documented in loader JSDoc.
 
-`loadPlugins()` uses Node's native `import()`, which in Node 18/20 cannot
+`loadPlugins()` uses Node's native `import()`, which in Node 22 cannot
 execute `.ts` files directly. OpenClaw's own plugin loader uses
 [jiti](https://github.com/unjs/jiti) for TypeScript-transparent loading;
 clawtools does not include that dependency to keep the package lightweight.
