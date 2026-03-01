@@ -118,8 +118,8 @@ clawtools/
 │       └── loader.ts       # OpenClaw-compatible plugin loader
 ├── examples/
 │   ├── agentic/        # Complete agentic loop: stream → tool use → feed back
-│   ├── tool/read-file/ # Call a tool directly, no LLM
-│   └── openai-connector/ # Custom connector example
+│   ├── connector/      # Built-in OpenAI connector + custom echo connector
+│   └── tool/read-file/ # Call a tool directly, no LLM
 └── openclaw/           # Git submodule (read-only)
 ```
 
