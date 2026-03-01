@@ -77,7 +77,7 @@ clawtools/plugins    → loadPlugins
 - JSON Schema extraction with Gemini keyword sanitizer
 
 ### Connector System
-- Built-in connectors for every provider in the `@mariozechner/pi-ai` catalog (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtools`
+- Built-in connectors for every supported provider (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtools`
 - `ConnectorRegistry` with lookup by ID, provider name, or API transport
 - Uniform `AsyncIterable<StreamEvent>` streaming interface across all providers
 - **Typed conversation history** — `UserMessage`, `AssistantMessage`, `ConversationMessage` types; `StreamContext.messages` is fully typed
@@ -113,7 +113,7 @@ clawtools/
 │   ├── connectors/
 │   │   ├── registry.ts     # ConnectorRegistry class + resolveAuth
 │   │   ├── discovery.ts    # Extension discovery + built-in connector loader
-│   │   └── pi-ai-bridge.ts # Adapts @mariozechner/pi-ai providers → Connector (bundled)
+│   │   └── pi-ai-bridge.ts # Adapter for upstream provider catalog → Connector (bundled)
 │   └── plugins/
 │       └── loader.ts       # OpenClaw-compatible plugin loader
 ├── examples/
