@@ -85,6 +85,7 @@ describe("pre-aborted signal", () => {
 describe("mid-stream abort via hung server", () => {
     it(
         "rejects when the signal fires after the stream has started",
+        { timeout: 5_000 },
         async () => {
             mock.setScenario({ type: "hung" });
             const ac = new AbortController();
@@ -93,11 +94,11 @@ describe("mid-stream abort via hung server", () => {
             setTimeout(() => ac.abort(), 80);
             await expect(app().query("long-running", ac.signal)).rejects.toThrow();
         },
-        { timeout: 5_000 },
     );
 
     it(
         "rejection is an AbortError when aborted mid-stream",
+        { timeout: 5_000 },
         async () => {
             mock.setScenario({ type: "hung" });
             const ac = new AbortController();
@@ -111,7 +112,6 @@ describe("mid-stream abort via hung server", () => {
             expect(thrown).toBeDefined();
             expect((thrown as Error).name).toMatch(/abort/i);
         },
-        { timeout: 5_000 },
     );
 });
 
