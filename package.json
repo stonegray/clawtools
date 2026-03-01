@@ -51,7 +51,7 @@
     "lint": "eslint src/ test/",
     "typecheck:examples": "tsc -p examples/tsconfig.json --noEmit",
     "prepack": "npm run clean && npm run build",
-    "test": "vitest run",
+    "test": "npm run lint && npm run typecheck && npm run typecheck:test && vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "release:patch": "npm version patch && git push origin main --follow-tags",
