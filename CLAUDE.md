@@ -29,7 +29,6 @@ respec/     # specs + PoCs capturing OpenClaw behavior/shape
 scripts/    # build helpers (notably: bundle OpenClaw core tools)
 src/        # clawtools library implementation
 test/       # vitest test suite + fixtures + test app
-docs/planning/  # architecture drafts and planning documents (not user-facing)
 ```
 
 `src/` is intentionally small and stable (registries, types, discovery). The heavy lifting of “staying compatible with upstream OpenClaw” happens via `openclaw/` + `scripts/bundle-core-tools.mjs`.
@@ -67,8 +66,9 @@ The `openclaw/` submodule is **read-only**. Never modify, write to, or add files
 - `src/connectors/discovery.ts` — Discovers extension metadata from `openclaw/extensions/` (metadata only; no channel runtime)
 - `src/plugins/loader.ts` — Loads OpenClaw-compatible plugins from filesystem
 - `scripts/bundle-core-tools.mjs` — Bundles core tool implementations from the OpenClaw submodule
-- `examples/openai-connector/index.ts` — Minimal example connector that streams “Hello world!”
-- `docs/usage.md` — Usage guide with tool/connector/plugin examples
+- `examples/connector/openai/index.ts` — Uses built-in OpenAI connector to stream a response
+- `examples/connector/custom/index.ts` — Custom echo connector example
+- `docs/usage/` — Usage guide pages (getting-started, tools, connectors, messages, plugins, types)
 
 ### Agent Notes (read before making changes)
 
@@ -81,8 +81,8 @@ The `openclaw/` submodule is **read-only**. Never modify, write to, or add files
 
 ### Dependencies
 - OpenClaw (git submodule at `./openclaw`) — read-only source for tool/connector implementations
+- `@sinclair/typebox`, `ajv`, `undici` — runtime dependencies
 - TypeScript, @types/node — dev only
-- Zero runtime npm dependencies
 
 ### Build & Test
 ```bash
