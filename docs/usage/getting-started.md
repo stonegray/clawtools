@@ -6,7 +6,7 @@
 npm install clawtools
 ```
 
-Requires **Node.js ≥ 20**.
+Requires **Node.js ≥ 22**.
 
 ---
 
@@ -152,7 +152,7 @@ interface ExtensionInfo {
 
 Core tool execution depends on pre-built bundles:
 
-1. **Bundled tools** (production, after `npm run build`): `discoverCoreToolsAsync` loads `dist/core-tools/<tool>.js` bundles via the manifest at `dist/core-tools/manifest.json`. Works in any Node 18+ environment with no TypeScript runtime needed.
+1. **Bundled tools** (production, after `npm run build`): `discoverCoreToolsAsync` loads `dist/core-tools/<tool>.js` bundles via the manifest at `dist/core-tools/manifest.json`. Works in any Node 22+ environment with no TypeScript runtime needed.
 
 2. **Source fallback** (development): If no bundles exist but the openclaw git submodule is present, tools are loaded from `.ts` source files. Requires a TypeScript-capable runtime (vitest, tsx, ts-node, or Node 22+ with `--experimental-strip-types`).
 

@@ -15,7 +15,7 @@
 npm install clawtools
 ```
 
-Requires **Node.js ≥ 20**.
+Requires **Node.js ≥ 22**.
 
 **Required runtime dependencies:** `@sinclair/typebox`, `ajv`, and `undici` are listed in
 `dependencies` and must be present at runtime. They are kept *external* to the tool bundles
