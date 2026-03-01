@@ -19,7 +19,7 @@
  */
 
 import {
-    createClawtoolsAsync,
+    createClawtools,
     createNodeBridge,
     extractToolSchemas,
     type UserMessage,
@@ -40,7 +40,7 @@ const userPrompt = process.argv[2] ?? "Read src/index.ts and summarise its expor
 
 console.log(`\nUser: ${userPrompt}\n`);
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 
 // ─── Resolve tools ────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ if (!connector) {
     process.exit(1);
 }
 
-const model = connector.models?.find(m => m.id === MODEL_ID);
+const model = connector.models.find(m => m.id === MODEL_ID);
 if (!model) {
     console.error(`Model "${MODEL_ID}" not found for provider "${PROVIDER}".`);
     process.exit(1);

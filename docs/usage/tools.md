@@ -14,7 +14,7 @@ import { ToolRegistry, discoverCoreTools, discoverCoreToolsAsync } from "clawtoo
 
 ## `ToolRegistry`
 
-Central catalog and resolver. Both `createClawtools` and `createClawtoolsAsync` expose an already-populated instance at `ct.tools`.
+Central catalog and resolver. Both `createClawtoolsSync` and `createClawtools` expose an already-populated instance at `ct.tools`.
 
 ### Registration
 
@@ -181,7 +181,7 @@ Number of registered tools.
 
 ### `discoverCoreToolsAsync(registry, options?)` → `Promise<void>`
 
-**Async.** Loads pre-built bundles (or source fallback) and registers fully executable factories. This is what `createClawtoolsAsync` uses internally.
+**Async.** Loads pre-built bundles (or source fallback) and registers fully executable factories. This is what `createClawtools` uses internally.
 
 ### `getCoreToolCatalog()` → `ToolMeta[]`
 
@@ -427,10 +427,10 @@ The `fs` tool section (`read`, `write`, `edit`) requires a file-system bridge. T
 For local Node.js usage, import `createNodeBridge` and pass it in the context:
 
 ```ts
-import { createClawtoolsAsync } from "clawtools";
+import { createClawtools } from "clawtools";
 import { createNodeBridge } from "clawtools/tools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 const tools = ct.tools.resolveAll({

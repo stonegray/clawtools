@@ -26,14 +26,14 @@ for (const meta of ct.tools.list()) {
 }
 ```
 
-### `createClawtoolsAsync(options?)` — async, fully executable
+### `createClawtools(options?)` — async, fully executable
 
 Awaits ESM dynamic imports for every core tool and (by default) all built-in LLM connectors. After awaiting, tools returned by `resolveAll()` have working `execute` methods and connectors have working `stream` methods.
 
 ```ts
-import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+import { createClawtools, createNodeBridge } from "clawtools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 const tools = ct.tools.resolveAll({
@@ -68,13 +68,13 @@ interface ClawtoolsOptions {
   skipCoreTools?: boolean;
 
   // Skip auto-registration of built-in LLM provider connectors.
-  // Only applies to createClawtoolsAsync(). Default: false (connectors ARE registered).
+  // Only applies to createClawtools(). Default: false (connectors ARE registered).
   skipBuiltinConnectors?: boolean;
 
   // If true, begin loading tools and connectors in the background but return
   // the Clawtools instance immediately without waiting.
   // Await ct.ready before calling resolveAll() or streaming.
-  // Only applies to createClawtoolsAsync(). Has no effect on createClawtools().
+  // Only applies to createClawtools(). Has no effect on createClawtoolsSync().
   lazy?: boolean;
 }
 ```
@@ -82,7 +82,7 @@ interface ClawtoolsOptions {
 **Example — load only specific tools, no connectors:**
 
 ```ts
-const ct = await createClawtoolsAsync({
+const ct = await createClawtools({
   tools: { include: ["read", "write", "exec"] },
   skipBuiltinConnectors: true,
 });
@@ -91,7 +91,7 @@ const ct = await createClawtoolsAsync({
 **Example — load all tools in the `fs` group:**
 
 ```ts
-const ct = await createClawtoolsAsync({
+const ct = await createClawtools({
   tools: { include: ["group:fs"] },
 });
 ```
@@ -101,7 +101,7 @@ const ct = await createClawtoolsAsync({
 Use `lazy: true` when you need catalog metadata (tool names, descriptions, schemas, connector names) immediately at startup but want to defer pulling in provider SDKs until they are actually needed:
 
 ```ts
-const ct = await createClawtoolsAsync({ lazy: true });
+const ct = await createClawtools({ lazy: true });
 
 // Catalog is ready immediately — list tools, filter by profile, etc.
 const meta = ct.tools.list();

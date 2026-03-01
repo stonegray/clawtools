@@ -26,10 +26,10 @@ ensure these packages are installed in your project (`npm install @sinclair/type
 ## Quick Start
 
 ```typescript
-import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+import { createClawtools, createNodeBridge } from "clawtools";
 import { extractToolSchemas } from "clawtools/tools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 // Resolve tools — include root + bridge to enable read/write/edit
@@ -58,7 +58,7 @@ for await (const event of connector.stream(model, {
 ## Package entry points
 
 ```
-clawtools            → createClawtools, createClawtoolsAsync, all registries and types
+clawtools            → createClawtools, createClawtoolsSync, all registries and types
 clawtools/tools      → ToolRegistry, discovery, result helpers, param readers, schema utils
 clawtools/connectors → ConnectorRegistry, resolveAuth, discoverExtensions, builtins
 clawtools/plugins    → loadPlugins
@@ -68,7 +68,7 @@ clawtools/plugins    → loadPlugins
 
 ### Tool System
 - **23 core tools** compiled directly from the OpenClaw submodule: filesystem (`read`, `write`, `edit`), runtime (`exec`), web (`web_search`, `web_fetch`), memory, sessions, browser, canvas, messaging, automation, media, and more
-- Sync (`createClawtools`) and async (`createClawtoolsAsync`) entry points — sync for catalog/metadata, async for executable tools backed by pre-built ESM bundles
+- Sync (`createClawtoolsSync`) and async (`createClawtools`) entry points — sync for catalog/metadata, async for executable tools backed by pre-built ESM bundles
 - **`FsBridge` interface + `createNodeBridge(root)`** — plug any filesystem backend (local Node.js, sandboxed container, virtual FS) into the `read`/`write`/`edit` tools; `createNodeBridge` is the ready-to-use Node.js implementation
 - Filter tools by **profile** (`minimal`, `coding`, `messaging`, `full`) or **group** (`group:fs`, `group:web`, …)
 - Custom tool registration: direct `Tool` objects or lazy `ToolFactory` functions
@@ -77,7 +77,7 @@ clawtools/plugins    → loadPlugins
 - JSON Schema extraction with Gemini keyword sanitizer
 
 ### Connector System
-- Built-in connectors for every provider in the `@mariozechner/pi-ai` catalog (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtoolsAsync`
+- Built-in connectors for every provider in the `@mariozechner/pi-ai` catalog (Anthropic, OpenAI, Google, Amazon Bedrock, …) — loaded automatically by `createClawtools`
 - `ConnectorRegistry` with lookup by ID, provider name, or API transport
 - Uniform `AsyncIterable<StreamEvent>` streaming interface across all providers
 - **Typed conversation history** — `UserMessage`, `AssistantMessage`, `ConversationMessage` types; `StreamContext.messages` is fully typed
@@ -101,7 +101,7 @@ clawtools is intentionally minimal: it’s a compatibility layer, not a full Ope
 ```
 clawtools/
 ├── src/
-│   ├── index.ts            # createClawtools, createClawtoolsAsync, re-exports
+│   ├── index.ts            # createClawtools, createClawtoolsSync, re-exports
 │   ├── types.ts            # All type definitions (standalone, no openclaw dependency)
 │   ├── tools/
 │   │   ├── registry.ts     # ToolRegistry class
