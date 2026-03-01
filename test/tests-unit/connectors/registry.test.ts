@@ -42,6 +42,44 @@ describe("ConnectorRegistry", () => {
             registry.register(makeMockConnector({ id: "b", provider: "provB" }));
             expect(registry.size).toBe(2);
         });
+
+        it("re-registering with the same ID but a different api transport clears the stale apiIndex (bug #2 fix)", () => {
+            // Register with one api transport, then overwrite with a different one.
+            // The old api slot must be cleaned up so getByApi doesn't return a
+            // connector that no longer uses that transport.
+            registry.register(makeMockConnector({ api: "openai-completions" }));
+            expect(registry.getByApi("openai-completions")).toHaveLength(1);
+            expect(registry.getByApi("anthropic-messages")).toHaveLength(0);
+
+            // Overwrite with the same ID but a different api
+            registry.register(makeMockConnector({ api: "anthropic-messages" }));
+
+            // Old api entry must be gone
+            expect(registry.getByApi("openai-completions")).toHaveLength(0);
+            // New api entry must be present
+            expect(registry.getByApi("anthropic-messages")).toHaveLength(1);
+            // Size is still 1 — same ID, just overwritten
+            expect(registry.size).toBe(1);
+        });
+
+        it("re-registering with the same ID but a different provider clears the stale providerIndex (bug #3 fix)", () => {
+            // Register with one provider, then overwrite with a different provider name.
+            // The old provider slot must be removed so getByProvider doesn't return
+            // a connector that is no longer registered under that provider.
+            registry.register(makeMockConnector({ provider: "provider-alpha" }));
+            expect(registry.getByProvider("provider-alpha")).toBeDefined();
+
+            // Overwrite with the same ID but a different provider
+            registry.register(makeMockConnector({ provider: "provider-beta" }));
+
+            // Old provider entry must be gone
+            expect(registry.getByProvider("provider-alpha")).toBeUndefined();
+            // New provider entry must be present and point to the connector
+            expect(registry.getByProvider("provider-beta")).toBeDefined();
+            expect(registry.getByProvider("provider-beta")?.id).toBe("mock-connector");
+            // Size is still 1 — same ID, just overwritten
+            expect(registry.size).toBe(1);
+        });
     });
 
     // ---------------------------------------------------------------------------
@@ -95,6 +133,45 @@ describe("ConnectorRegistry", () => {
             registry.register(makeMockConnector({ id: "a", provider: "p1" }));
             registry.register(makeMockConnector({ id: "b", provider: "p2" }));
             expect(registry.list()).toHaveLength(2);
+        });
+    });
+
+    describe("[Symbol.iterator]", () => {
+        it("is iterable with for-of", () => {
+            registry.register(makeMockConnector({ id: "a", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "b", provider: "p2" }));
+            const ids: string[] = [];
+            for (const c of registry) {
+                ids.push(c.id);
+            }
+            expect(ids).toHaveLength(2);
+            expect(ids).toContain("a");
+            expect(ids).toContain("b");
+        });
+
+        it("spread operator works", () => {
+            registry.register(makeMockConnector({ id: "x", provider: "px" }));
+            const arr = [...registry];
+            expect(arr).toHaveLength(1);
+            expect(arr[0].id).toBe("x");
+        });
+
+        it("empty registry yields no items", () => {
+            expect([...registry]).toHaveLength(0);
+        });
+
+        it("iteration order matches registration order", () => {
+            registry.register(makeMockConnector({ id: "first", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "second", provider: "p2" }));
+            registry.register(makeMockConnector({ id: "third", provider: "p3" }));
+            const ids = [...registry].map((c) => c.id);
+            expect(ids).toEqual(["first", "second", "third"]);
+        });
+
+        it("Array.from() works", () => {
+            registry.register(makeMockConnector({ id: "a", provider: "p1" }));
+            registry.register(makeMockConnector({ id: "b", provider: "p2" }));
+            expect(Array.from(registry)).toHaveLength(2);
         });
     });
 
@@ -207,6 +284,21 @@ describe("resolveAuth", () => {
             expect(resolveAuth("_mode_test")?.mode).toBe("api-key");
         } finally {
             delete process.env._MODE_TEST_API_KEY;
+        }
+    });
+
+    it("mode=api-key variant has apiKey and source as non-optional strings", () => {
+        const auth = resolveAuth("anthropic", [], "my-key");
+        expect(auth).toBeDefined();
+        // Type narrowing: once mode === "api-key", apiKey and source are required strings
+        if (auth && auth.mode === "api-key") {
+            // TypeScript should accept these as string (not string | undefined)
+            const key: string = auth.apiKey;
+            const src: string = auth.source;
+            expect(key).toBe("my-key");
+            expect(src).toBe("explicit");
+        } else {
+            throw new Error("Expected mode=api-key");
         }
     });
 });

@@ -19,7 +19,7 @@
  */
 
 import {
-    createClawtoolsAsync,
+    createClawtools,
     createNodeBridge,
     extractToolSchemas,
     type UserMessage,
@@ -30,7 +30,7 @@ import {
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const PROVIDER = "anthropic";                          // change to "openai", "google", etc.
-const MODEL_ID = "claude-opus-4-5";                    // change to any model in that provider
+const MODEL_ID = "claude-opus-4-6";                    // change to any model in that provider
 const MAX_TURNS = 10;                                  // safety limit on tool-call rounds
 const ROOT = process.cwd();                            // workspace root for fs tools
 
@@ -40,7 +40,7 @@ const userPrompt = process.argv[2] ?? "Read src/index.ts and summarise its expor
 
 console.log(`\nUser: ${userPrompt}\n`);
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 
 // ─── Resolve tools ────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ if (!connector) {
     process.exit(1);
 }
 
-const model = connector.models?.find(m => m.id === MODEL_ID);
+const model = connector.models.find(m => m.id === MODEL_ID);
 if (!model) {
     console.error(`Model "${MODEL_ID}" not found for provider "${PROVIDER}".`);
     process.exit(1);

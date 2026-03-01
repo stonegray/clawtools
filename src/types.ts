@@ -155,7 +155,7 @@ export interface FsStat {
  * ```ts
  * import { createNodeBridge } from "clawtools/tools";
  *
- * const ct = await createClawtoolsAsync();
+ * const ct = await createClawtools();
  * const tools = ct.tools.resolveAll({
  *   workspaceDir: "/my/project",
  *   root: "/my/project",
@@ -165,8 +165,24 @@ export interface FsStat {
  */
 export interface FsBridge {
     stat(args: { filePath: string; cwd?: string }): Promise<FsStat | null>;
+    /**
+     * Read the full contents of a file.
+     *
+     * @throws Implementations must throw (e.g. an `ENOENT`-style error) when
+     * the file does not exist or cannot be read. This method does **not**
+     * return `null` for missing files — callers are expected to catch thrown
+     * errors.
+     */
     readFile(args: { filePath: string; cwd?: string }): Promise<Buffer>;
     mkdirp(args: { filePath: string; cwd?: string }): Promise<void>;
+    /**
+     * Write data to a file.
+     *
+     * Implementations must automatically create any missing parent directories
+     * before writing (equivalent to `mkdir -p` followed by the write).
+     * Callers rely on this behaviour and do **not** call {@link mkdirp}
+     * separately before `writeFile`.
+     */
     writeFile(args: { filePath: string; cwd?: string; data: string | Buffer }): Promise<void>;
 }
 
@@ -293,27 +309,204 @@ export type AuthMode =
     | "aws-sdk"
     | "unknown";
 
-/** Resolved authentication for a provider call. */
-export interface ResolvedAuth {
-    apiKey?: string;
-    profileId?: string;
-    source?: string;
-    mode: AuthMode;
-}
+/**
+ * Resolved authentication for a provider call.
+ *
+ * This is a discriminated union on `mode`. Each variant carries only the
+ * fields that are meaningful for that authentication mechanism:
+ *
+ * - **`"api-key"`** — `apiKey` is always present. `source` indicates where
+ *   the key was found (`"explicit"`, `"env:<VAR_NAME>"`, etc.).
+ * - **`"aws-sdk"`** — No API key. Credentials come from the AWS SDK credential
+ *   chain (environment, `~/.aws/credentials`, IAM role, etc.). `profileId` is
+ *   optionally set to the named AWS profile.
+ * - **`"oauth"`** / **`"token"`** — Token-based auth; `apiKey` carries the
+ *   bearer token.
+ * - **`"none"`** — No authentication required.
+ * - **`"mixed"`** / **`"unknown"`** — Fallback variants for providers with
+ *   complex or undetermined auth requirements.
+ *
+ * @example Narrowing by mode:
+ * ```ts
+ * const auth = resolveAuth("anthropic", connector.envVars);
+ * if (auth?.mode === "api-key") {
+ *   // auth.apiKey is guaranteed to be a non-empty string here
+ *   headers["x-api-key"] = auth.apiKey;
+ * }
+ * ```
+ */
+export type ResolvedAuth =
+    | {
+        mode: "api-key";
+        /** The resolved API key (always present for this mode). */
+        apiKey: string;
+        /** Where the key was found: `"explicit"`, `"env:<VAR_NAME>"`, etc. */
+        source: string;
+        profileId?: undefined;
+    }
+    | {
+        mode: "aws-sdk";
+        /** Named AWS profile, if applicable. */
+        profileId?: string;
+        apiKey?: undefined;
+        source?: undefined;
+    }
+    | {
+        mode: "oauth" | "token";
+        /** Bearer token. */
+        apiKey: string;
+        source: string;
+        profileId?: undefined;
+    }
+    | {
+        mode: "none";
+        apiKey?: undefined;
+        source?: undefined;
+        profileId?: undefined;
+    }
+    | {
+        mode: "mixed" | "unknown";
+        apiKey?: string;
+        source?: string;
+        profileId?: string;
+    };
 
 // =============================================================================
 // Stream Event Types
 // =============================================================================
 
-/** Events emitted during an LLM streaming response. */
+/**
+ * Token-usage information reported by the LLM on a completed turn.
+ *
+ * Fields are optional so that connectors which only have partial usage data
+ * (e.g. only input-token counts) do not need to synthesise zeros.
+ */
+export interface UsageInfo {
+    inputTokens?: number;
+    outputTokens?: number;
+}
+
+/**
+ * Events emitted by a {@link Connector} during a single LLM streaming turn.
+ *
+ * ## Stream Protocol
+ *
+ * ### Guaranteed events (always present)
+ *
+ * - **`start`** — Always the first event. Signals that the HTTP connection is
+ *   established and streaming has begun.
+ * - **`done`** — Always the last event on a _successful_ turn. Contains the
+ *   terminal `stopReason` and optional token-usage data. After `done` the
+ *   async iterator ends.
+ * - **`error`** — Replaces `done` when the provider returns a stream-level
+ *   error. After `error` the async iterator ends. `done` is **not** also
+ *   emitted in this case.
+ *
+ * ### Text events (provider-dependent)
+ *
+ * - **`text_delta`** — Incremental text token. Accumulate these to build the
+ *   full response string.
+ * - **`text_end`** — Emitted once when a text block finishes. The `content`
+ *   field equals the full accumulated text. Treating `text_end` as an
+ *   alternative to accumulating `text_delta`s is valid, but `text_end` is not
+ *   always emitted — in particular, some providers may end a text block with a
+ *   `toolcall_start` without a preceding `text_end`. Always accumulate
+ *   `text_delta`s as the primary signal.
+ *
+ * ### Thinking events (provider-dependent)
+ *
+ * Same semantics as text events but for reasoning/thinking blocks. Only
+ * emitted by providers/models that support extended thinking (see
+ * `ModelDescriptor.reasoning`).
+ *
+ * - **`thinking_delta`** — Incremental thinking token.
+ * - **`thinking_end`** — Full accumulated thinking content.
+ *
+ * ### Tool-call events
+ *
+ * Tool calls are streamed in three phases:
+ *
+ * 1. **`toolcall_start`** — A new tool call has begun. The optional `id`
+ *    field is populated when the provider reveals the call ID at the start of
+ *    the call (e.g. Anthropic). If absent, the ID is only available at
+ *    `toolcall_end`.
+ * 2. **`toolcall_delta`** — Incremental JSON fragment of the tool arguments.
+ *    The optional `id` mirrors the id from the corresponding `toolcall_start`
+ *    when the provider supports it.
+ * 3. **`toolcall_end`** — The tool call is complete. `toolCall.id`,
+ *    `toolCall.name`, and `toolCall.arguments` are fully resolved here.
+ *
+ * **Multiple concurrent tool calls:** Some providers (e.g. Anthropic with
+ * parallel tool use) may interleave events for multiple tool calls in the same
+ * stream. Use the `id` fields on `toolcall_start` / `toolcall_delta` to
+ * correlate delta fragments to the correct call.
+ *
+ * ### Tool-use loop pattern
+ *
+ * When `done.stopReason === "toolUse"` the LLM expects tool results to be fed
+ * back. Collect all `toolcall_end` events from the stream, execute the tools,
+ * then add a `ToolResultMessage` for each result to the conversation and call
+ * `connector.stream()` again:
+ *
+ * ```ts
+ * const toolCalls: { id: string; name: string; arguments: Record<string, unknown> }[] = [];
+ * for await (const event of connector.stream(model, context, options)) {
+ *   if (event.type === "text_delta") process.stdout.write(event.delta);
+ *   if (event.type === "toolcall_end") toolCalls.push(event.toolCall);
+ *   if (event.type === "done" && event.stopReason === "toolUse") {
+ *     // Execute tools and build tool-result messages...
+ *   }
+ *   if (event.type === "error") throw new Error(event.error);
+ * }
+ * ```
+ *
+ * ### Usage data
+ *
+ * `done.usage` is populated by providers that report token counts. When absent
+ * it means the provider does not expose usage data for this call — treat it as
+ * unavailable, not as zero. The built-in pi-ai bridge always populates usage
+ * for Anthropic, OpenAI, and Google providers. The debug connector always
+ * populates usage with a rough token estimate.
+ *
+ * ### `stopReason: "error"` on `done`
+ *
+ * A `done` event with `stopReason: "error"` indicates the provider terminated
+ * the stream with a non-exception error condition (e.g. a content-policy
+ * refusal that produces a stop reason but no exception). This is distinct from
+ * the `error` event, which signals an exception in the stream pipeline. When
+ * `stopReason: "error"` is received without a preceding `error` event, treat
+ * it as an empty response with no recoverable content. A preceding `error`
+ * event is **not** guaranteed in this case.
+ */
 export type StreamEvent =
     | { type: "start" }
     | { type: "text_delta"; delta: string }
     | { type: "text_end"; content: string }
     | { type: "thinking_delta"; delta: string }
     | { type: "thinking_end"; content: string }
-    | { type: "toolcall_start" }
-    | { type: "toolcall_delta"; delta: string }
+    | {
+        type: "toolcall_start";
+        /**
+         * The tool-call ID, if available at stream-start time.
+         *
+         * Populated by connectors that receive the ID before the argument
+         * stream begins (e.g. Anthropic). May be `undefined` for providers
+         * that only resolve the ID at `toolcall_end`.
+         */
+        id?: string;
+    }
+    | {
+        type: "toolcall_delta";
+        delta: string;
+        /**
+         * The tool-call ID this delta belongs to.
+         *
+         * Mirrors the `id` from the corresponding `toolcall_start` event.
+         * Useful for correlating deltas when multiple tool calls are in-flight
+         * in the same stream (e.g. Anthropic parallel tool use).
+         */
+        id?: string;
+    }
     | {
         type: "toolcall_end";
         toolCall: {
@@ -325,7 +518,7 @@ export type StreamEvent =
     | {
         type: "done";
         stopReason: "stop" | "toolUse" | "length" | "error";
-        usage?: { inputTokens: number; outputTokens: number };
+        usage?: UsageInfo;
     }
     | { type: "error"; error: string };
 
@@ -359,6 +552,15 @@ export interface AssistantMessage {
 export type ConversationMessage = UserMessage | AssistantMessage;
 
 /**
+ * Union of all message types that can appear in a conversation history array,
+ * including tool results fed back into the context.
+ *
+ * Use this type when storing or typing the full message history passed to a
+ * connector via {@link StreamContext.messages}.
+ */
+export type ContextMessage = UserMessage | AssistantMessage | ToolResultMessage;
+
+/**
  * A tool result message — clawtools' internal format for feeding tool
  * execution results back into the conversation.
  *
@@ -382,10 +584,81 @@ export interface ToolResultMessage {
 // Connector Definition
 // =============================================================================
 
+/**
+ * A minimal JSON Schema object suitable for describing LLM tool input schemas.
+ *
+ * This covers the common subset used when passing tool definitions to LLM
+ * providers via {@link StreamContext}. The `type` field is required for
+ * top-level schemas (typically `"object"`). All other fields are optional so
+ * that simple schemas (`{}`, `{ type: "string" }`) and complex ones
+ * (`$defs`, `anyOf`, …) are equally accepted.
+ *
+ * @example
+ * ```ts
+ * const schema: JsonSchema = {
+ *   type: "object",
+ *   properties: {
+ *     message: { type: "string", description: "Text to echo" },
+ *   },
+ *   required: ["message"],
+ * };
+ * ```
+ */
+export interface JsonSchema {
+    type?: string;
+    properties?: Record<string, JsonSchema>;
+    items?: JsonSchema;
+    required?: string[];
+    description?: string;
+    enum?: unknown[];
+    const?: unknown;
+    anyOf?: JsonSchema[];
+    oneOf?: JsonSchema[];
+    allOf?: JsonSchema[];
+    $ref?: string;
+    $defs?: Record<string, JsonSchema>;
+    [key: string]: unknown;
+}
+
 /** Options passed to a connector's stream function. */
 export interface StreamOptions {
     temperature?: number;
     maxTokens?: number;
+    /**
+     * AbortSignal for cancelling the stream mid-flight.
+     *
+     * Pass an `AbortController.signal` here to cancel the underlying HTTP
+     * request / SSE connection at any time. When the signal fires, the
+     * connector will stop emitting events and the async iterator ends.
+     *
+     * **What happens on abort:** The stream will emit an `error` event
+     * (`{ type: "error", error: "..." }`) and then end, OR it may simply
+     * end without an error event if the underlying transport closes cleanly.
+     * Treat an aborted stream as a cancelled request — do not assume any
+     * partial content that arrived before the abort is a complete response.
+     *
+     * @example
+     * ```ts
+     * const controller = new AbortController();
+     * setTimeout(() => controller.abort(), 5_000); // cancel after 5s
+     *
+     * for await (const event of connector.stream(model, context, {
+     *   signal: controller.signal,
+     * })) {
+     *   if (event.type === "text_delta") process.stdout.write(event.delta);
+     *   if (event.type === "done") break;
+     *   if (event.type === "error") throw new Error(event.error);
+     * }
+     * ```
+     *
+     * To cancel from outside the loop:
+     * ```ts
+     * const ctrl = new AbortController();
+     * const stream = connector.stream(model, context, { signal: ctrl.signal });
+     * // ...elsewhere in your code:
+     * ctrl.abort(); // the for-await loop above will exit on the next iteration
+     * ```
+     */
     signal?: AbortSignal;
     apiKey?: string;
     headers?: Record<string, string>;
@@ -395,7 +668,15 @@ export interface StreamOptions {
 export interface StreamContext {
     systemPrompt?: string;
     messages: Array<UserMessage | AssistantMessage | ToolResultMessage>;
-    tools?: Array<{ name: string; description: string; input_schema: unknown }>;
+    /**
+     * Tool definitions to include in this invocation.
+     *
+     * Each tool's `input_schema` should be a JSON Schema object (or a TypeBox
+     * schema, which compiles to JSON Schema). Use the {@link JsonSchema}
+     * interface for type-safe construction, or `Record<string, unknown>` when
+     * passing through an opaque schema from an external source.
+     */
+    tools?: Array<{ name: string; description: string; input_schema: JsonSchema | Record<string, unknown> }>;
 }
 
 /**
@@ -413,10 +694,28 @@ export interface Connector {
     provider: string;
     /** API transport protocol. */
     api: Api;
-    /** Available models for this connector. */
-    models?: ModelDescriptor[];
+    /**
+     * Available models for this connector.
+     *
+     * Every built-in connector ships with a populated model list. For
+     * connectors that fetch their model catalog dynamically (e.g. from a
+     * remote registry), implement {@link listModels} and set this to an
+     * empty array as the initial value.
+     */
+    models: ModelDescriptor[];
     /** Environment variable names for API key resolution. */
     envVars?: string[];
+    /**
+     * Fetch the connector's full model catalog asynchronously.
+     *
+     * Implement this method on connectors whose model list may change at
+     * runtime or must be fetched from a remote API (e.g. a self-hosted LLM
+     * registry). When present, callers should prefer `listModels()` over
+     * the static `models` array for up-to-date data.
+     *
+     * If absent, consumers fall back to the static `models` array.
+     */
+    listModels?: () => Promise<ModelDescriptor[]>;
 
     /**
      * Stream a response from the LLM.
@@ -545,7 +844,11 @@ export interface PluginApi {
 
     /**
      * Resolve a path relative to the plugin's directory.
-     * @remarks Returns the input unchanged in clawtools (no plugin directory context).
+     *
+     * @remarks **Placeholder — currently returns `input` unchanged.**
+     * In OpenClaw, this resolves paths relative to the plugin's own directory.
+     * In clawtools, no plugin directory context is available at registration
+     * time, so this is a no-op stub reserved for future resolution logic.
      */
     resolvePath: (input: string) => string;
 

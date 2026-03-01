@@ -9,11 +9,11 @@
  * e.g: npx tsx examples/tool/read-file/index.ts ./README.md
  */
 
-import { createClawtoolsAsync } from "../../../src/index.js";
+import { createClawtools } from "../../../src/index.js";
 
 const targetPath = process.argv[2] ?? "./README.md";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 
 // Resolve tools with a workspace context pointing at the repo root
 const tools = ct.tools.resolveAll({ workspaceDir: process.cwd() });

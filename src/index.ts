@@ -18,6 +18,8 @@
  * }
  *
  * // Resolve tools for an LLM context
+ * // Note: pass root + bridge (FileBridge) to enable the fs tools (read/write/edit).
+ * // e.g.: ct.tools.resolveAll({ workspaceDir: "/my/project", root: "/my/project", bridge: createNodeBridge("/my/project") })
  * const tools = ct.tools.resolveAll({ workspaceDir: "/my/project" });
  *
  * // Register a custom tool
@@ -72,13 +74,16 @@ export type {
     ProviderConfig,
     AuthMode,
     ResolvedAuth,
+    JsonSchema,
     StreamEvent,
     StreamOptions,
     StreamContext,
     UserMessage,
     AssistantMessage,
     ConversationMessage,
+    ContextMessage,
     ToolResultMessage,
+    UsageInfo,
 
     // Plugin types
     PluginDefinition,
@@ -112,7 +117,12 @@ export {
     cleanSchemaForGemini,
     createNodeBridge,
 } from "./tools/index.js";
-export type { DiscoveryOptions } from "./tools/index.js";
+export type {
+    DiscoveryOptions,
+    StringParamOptions,
+    NumberParamOptions,
+    BooleanParamOptions,
+} from "./tools/index.js";
 
 // =============================================================================
 // Re-exports: Connector system
@@ -120,13 +130,16 @@ export type { DiscoveryOptions } from "./tools/index.js";
 export {
     ConnectorRegistry,
     resolveAuth,
+    serializeModel,
+    deserializeModel,
     discoverExtensions,
+    discoverBuiltinConnectors,
     discoverBuiltinConnectorsAsync,
     getExtensionPath,
     listChannelExtensions,
     listProviderExtensions,
 } from "./connectors/index.js";
-export type { AuthResolver, ExtensionInfo } from "./connectors/index.js";
+export type { AuthResolver, ExtensionInfo, SerializedModel } from "./connectors/index.js";
 
 // =============================================================================
 // Re-exports: Plugin system
@@ -148,6 +161,7 @@ import { ConnectorRegistry } from "./connectors/registry.js";
 import { discoverCoreTools, discoverCoreToolsAsync, type DiscoveryOptions } from "./tools/discovery.js";
 import {
     discoverExtensions,
+    discoverBuiltinConnectors,
     discoverBuiltinConnectorsAsync,
     type ExtensionInfo,
 } from "./connectors/discovery.js";
@@ -181,11 +195,11 @@ export interface ClawtoolsOptions {
     /**
      * If true, skip auto-registration of built-in LLM provider connectors.
      *
-     * By default, `createClawtoolsAsync()` registers connectors for every
+     * By default, `createClawtools()` (async) registers connectors for every
      * provider in the `@mariozechner/pi-ai` catalog (anthropic, openai,
      * google, amazon-bedrock, …). Set this flag to manage connectors manually.
      *
-     * Has no effect on `createClawtools()` (sync), which never loads connectors.
+     * Has no effect on `createClawtoolsSync()`, which never loads connectors.
      */
     skipBuiltinConnectors?: boolean;
 
@@ -198,7 +212,7 @@ export interface ClawtoolsOptions {
      * provider SDKs until they are actually needed. Await `ct.ready` before
      * calling `resolveAll()` or streaming when using this mode.
      *
-     * Has no effect on `createClawtools()` (sync), which never performs async
+     * Has no effect on `createClawtoolsSync()`, which never performs async
      * loading.
      */
     lazy?: boolean;
@@ -217,22 +231,22 @@ export interface Clawtools {
     /**
      * Resolves when all background loading is complete.
      *
-     * For `createClawtools()` (sync) this is always already resolved.
-     * For `createClawtoolsAsync()` without `lazy: true` this is also already
-     * resolved by the time the instance is returned.
-     * For `createClawtoolsAsync({ lazy: true })`, await this before calling
+     * For `createClawtoolsSync()` this is always already resolved.
+     * For `createClawtools()` (async) without `lazy: true` this is also
+     * already resolved by the time the instance is returned.
+     * For `createClawtools({ lazy: true })`, await this before calling
      * `tools.resolveAll()` or streaming for the first time.
      */
     ready: Promise<void>;
 }
 
 /**
- * Create a pre-configured clawtools instance.
+ * Create a pre-configured clawtools instance (sync, catalog-only).
  *
  * This is the recommended entry point for catalog-only use (listing tools,
  * filtering by profile, resolving metadata). Tool factories are registered
  * lazily but **cannot execute** without pre-loaded modules — call
- * {@link createClawtoolsAsync} when you need `resolveAll()` to return
+ * {@link createClawtools} (async) when you need `resolveAll()` to return
  * executable tools backed by real implementations.
  *
  * @param options - Configuration options.
@@ -240,19 +254,19 @@ export interface Clawtools {
  *
  * @example
  * ```ts
- * import { createClawtools } from "clawtools";
+ * import { createClawtoolsSync } from "clawtools";
  *
- * const ct = createClawtools();
+ * const ct = createClawtoolsSync();
  *
  * // Catalog metadata is always available
  * for (const meta of ct.tools.list()) {
  *   console.log(`${meta.id}: ${meta.description}`);
  * }
  *
- * // For executable tools, use createClawtoolsAsync() instead.
+ * // For executable tools, use await createClawtools() instead.
  * ```
  */
-export function createClawtools(options?: ClawtoolsOptions): Clawtools {
+export function createClawtoolsSync(options?: ClawtoolsOptions): Clawtools {
     const toolRegistry = new ToolRegistry();
     const connectorRegistry = new ConnectorRegistry();
 
@@ -278,19 +292,22 @@ export function createClawtools(options?: ClawtoolsOptions): Clawtools {
 /**
  * Create a pre-configured clawtools instance with fully executable tools.
  *
- * Async variant of {@link createClawtools}. Uses {@link discoverCoreToolsAsync}
- * to load pre-built tool bundles (or openclaw TypeScript source under a
- * compatible runtime). After awaiting, `ct.tools.resolveAll()` returns live
- * tool objects with working `execute` methods.
+ * Uses {@link discoverCoreToolsAsync} to load pre-built tool bundles (or
+ * openclaw TypeScript source under a compatible runtime). After awaiting,
+ * `ct.tools.resolveAll()` returns live tool objects with working `execute`
+ * methods.
+ *
+ * This is the **async default** entry point — prefer this over
+ * {@link createClawtoolsSync} unless you only need catalog metadata.
  *
  * @param options - Configuration options.
  * @returns A configured Clawtools instance with executable tools.
  *
  * @example
  * ```ts
- * import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+ * import { createClawtools, createNodeBridge } from "clawtools";
  *
- * const ct = await createClawtoolsAsync();
+ * const ct = await createClawtools();
  * const root = process.cwd();
  *
  * // Tools are fully executable after awaiting
@@ -299,9 +316,14 @@ export function createClawtools(options?: ClawtoolsOptions): Clawtools {
  *   bridge: createNodeBridge(root),
  * });
  * console.log(`${tools.length} tools loaded`);
+ *
+ * // Iterate connectors directly from the facade
+ * for (const connector of ct.connectors) {
+ *   console.log(connector.id);
+ * }
  * ```
  */
-export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<Clawtools> {
+export async function createClawtools(options?: ClawtoolsOptions): Promise<Clawtools> {
     const toolRegistry = new ToolRegistry();
     const connectorRegistry = new ConnectorRegistry();
 
@@ -316,7 +338,7 @@ export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<
 
     const connectorsLoad = options?.skipBuiltinConnectors
         ? Promise.resolve()
-        : discoverBuiltinConnectorsAsync().then((builtins) => {
+        : discoverBuiltinConnectors().then((builtins) => {
               for (const connector of builtins) {
                   connectorRegistry.register(connector);
               }
@@ -341,4 +363,13 @@ export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<
         extensions,
         ready: Promise.resolve(),
     };
+}
+
+/**
+ * @deprecated Use {@link createClawtools} instead.
+ * Renamed to drop the `Async` suffix per the async-by-default naming convention.
+ * The sync variant is now {@link createClawtoolsSync}.
+ */
+export async function createClawtoolsAsync(options?: ClawtoolsOptions): Promise<Clawtools> {
+    return createClawtools(options);
 }

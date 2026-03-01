@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2024"],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -15,7 +15,13 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "clawtools": ["./src/index.ts"],
+      "clawtools/tools": ["./src/tools/index.ts"],
+      "clawtools/connectors": ["./src/connectors/index.ts"],
+      "clawtools/plugins": ["./src/plugins/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests", "openclaw"]

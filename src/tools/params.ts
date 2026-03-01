@@ -115,7 +115,7 @@ export function readStringParam(
 
     const value = trim ? raw.trim() : raw;
     if (!value && !allowEmpty) {
-        if (required) throw new ToolInputError(`${label} required`);
+        if (required) throw new ToolInputError(`${label} must not be blank`);
         return undefined;
     }
 
@@ -164,7 +164,7 @@ export function readNumberParam(
         return undefined;
     }
 
-    const num = typeof raw === "string" ? Number(raw) : (raw as number);
+    const num = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : NaN;
     if (typeof num !== "number" || Number.isNaN(num)) {
         throw new ToolInputError(`${label} must be a number`);
     }

@@ -48,6 +48,7 @@
     "clean": "rm -rf dist .build-tmp",
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc --project tsconfig.test.json --noEmit",
+    "lint": "eslint src/ test/",
     "typecheck:examples": "tsc -p examples/tsconfig.json --noEmit",
     "prepack": "npm run clean && npm run build",
     "test": "vitest run",
@@ -71,32 +72,34 @@
     "undici": "^7.22.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-bedrock": "^3.998.0",
-    "@mariozechner/pi-agent-core": "^0.55.0",
-    "@mariozechner/pi-ai": "^0.55.1",
-    "@mariozechner/pi-coding-agent": "^0.55.0",
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.0.0",
+    "@aws-sdk/client-bedrock": "^3.1000.0",
+    "@mariozechner/pi-agent-core": "^0.55.3",
+    "@mariozechner/pi-ai": "^0.55.3",
+    "@mariozechner/pi-coding-agent": "^0.55.3",
+    "@types/node": "^24.11.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "croner": "^10.0.1",
     "discord-api-types": "^0.38.40",
     "dotenv": "^17.3.1",
     "esbuild": "^0.27.3",
+    "eslint": "^10.0.2",
     "express": "^5.2.1",
     "file-type": "^21.3.0",
     "ipaddr.js": "^2.3.0",
     "json5": "^2.2.3",
     "markdown-it": "^14.1.1",
     "tslog": "^4.10.2",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18",
     "ws": "^8.19.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "peerDependencies": {
     "@lydell/node-pty": "*",
@@ -105,9 +108,17 @@
     "sharp": "*"
   },
   "peerDependenciesMeta": {
-    "@lydell/node-pty": { "optional": true },
-    "koffi": { "optional": true },
-    "node-llama-cpp": { "optional": true },
-    "sharp": { "optional": true }
+    "@lydell/node-pty": {
+      "optional": true
+    },
+    "koffi": {
+      "optional": true
+    },
+    "node-llama-cpp": {
+      "optional": true
+    },
+    "sharp": {
+      "optional": true
+    }
   }
 }

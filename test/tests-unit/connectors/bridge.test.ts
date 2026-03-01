@@ -165,7 +165,7 @@ describe("adaptEvents (via connector.stream)", () => {
 
     /** Call stream with a list of synthetic pi-ai events and collect the output. */
     async function stream(piEvents: unknown[]): Promise<StreamEvent[]> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         mockStream.mockReturnValueOnce(makeEvents(piEvents) as any);
         return drain(connector.stream(BASE_MODEL, BASE_CTX, {}));
     }
@@ -293,14 +293,14 @@ describe("toContext (via piStream call inspection)", () => {
     beforeEach(() => {
         connector = getBuiltinConnectors()[0];
         mockStream.mockClear();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         mockStream.mockReturnValue(makeEvents([]) as any);
     });
 
     /** Invoke the connector stream and return the context arg passed to piStream. */
     async function getCalledCtx(ctx: StreamContext): Promise<Record<string, unknown>> {
         await drain(connector.stream(BASE_MODEL, ctx, {}));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         return (mockStream.mock.calls[0] as any)[1] as Record<string, unknown>;
     }
 
@@ -351,7 +351,7 @@ describe("toModel fallback", () => {
     beforeEach(() => {
         connector = getBuiltinConnectors()[0];
         mockStream.mockClear();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         mockStream.mockReturnValue(makeEvents([]) as any);
     });
 
@@ -365,7 +365,7 @@ describe("toModel fallback", () => {
             maxTokens: 2_048,
         };
         await drain(connector.stream(unknown, BASE_CTX, {}));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const calledModel = (mockStream.mock.calls[0] as any)[0] as Record<string, unknown>;
         expect(calledModel.id).toBe("custom-model-not-in-catalog");
         expect(calledModel.baseUrl).toBe("https://custom.example.com");
@@ -379,7 +379,7 @@ describe("toModel fallback", () => {
             provider: "mock-provider",
         };
         await drain(connector.stream(minimal, BASE_CTX, {}));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const calledModel = (mockStream.mock.calls[0] as any)[0] as Record<string, unknown>;
         // toModel fills in defaults
         expect(calledModel.reasoning).toBe(false);

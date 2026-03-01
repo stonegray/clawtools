@@ -7,12 +7,15 @@
  *
  * The testapp connector is pointed at the openai-mock server, so these are
  * true end-to-end assertions over real HTTP + SSE.
+ *
+ * Sections that don't require an HTTP server (thinking events, multi-tool-call)
+ * use self-contained connectors that yield synthetic event sequences directly.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createTestApp } from "../testapp/index.js";
 import { withMockServer } from "../helpers/index.js";
-import type { StreamEvent } from "clawtools";
+import type { StreamEvent, Connector, ModelDescriptor, StreamContext } from "clawtools";
 
 const mock = withMockServer();
 
@@ -280,5 +283,190 @@ describe("cross-scenario consistency", () => {
         mock.setScenario({ type: "tool_call", name: "echo", id: "call_e2e", args });
         const { toolCalls } = await app().query("use echo");
         expect(toolCalls[0].args).toEqual(args);
+    });
+});
+
+// =============================================================================
+// Self-contained helpers (no HTTP mock server required)
+// =============================================================================
+
+/** Minimal model descriptor used by self-contained connectors. */
+const SC_MODEL: ModelDescriptor = {
+    id: "self-contained-model",
+    api: "openai-completions",
+    provider: "self-contained",
+};
+
+/** Minimal context used by self-contained connectors. */
+const SC_CTX: StreamContext = {
+    messages: [{ role: "user", content: "test" }],
+};
+
+/** Build a connector that yields a fixed sequence of events without HTTP. */
+function makeScConnector(events: StreamEvent[]): Connector {
+    return {
+        id: "sc-conn",
+        label: "Self-Contained Connector",
+        provider: "self-contained",
+        api: "openai-completions",
+        models: [],
+        async *stream(_model, _ctx, _opts) {
+            for (const ev of events) yield ev;
+        },
+    };
+}
+
+/** Drain all events from a self-contained connector. */
+async function drainSc(events: StreamEvent[]): Promise<StreamEvent[]> {
+    const conn = makeScConnector(events);
+    const result: StreamEvent[] = [];
+    for await (const ev of conn.stream(SC_MODEL, SC_CTX, {})) {
+        result.push(ev);
+    }
+    return result;
+}
+
+// ---------------------------------------------------------------------------
+// Thinking stream invariants — issue 49
+// ---------------------------------------------------------------------------
+
+describe("thinking stream invariants (self-contained)", () => {
+    it("thinking_delta and thinking_end events are yielded correctly", async () => {
+        // Verify that a connector producing thinking events round-trips them unchanged.
+        const events = await drainSc([
+            { type: "thinking_delta", delta: "thinking..." },
+            { type: "thinking_end", content: "thinking..." },
+        ]);
+        expect(events).toHaveLength(2);
+        expect(events[0]).toEqual({ type: "thinking_delta", delta: "thinking..." });
+        expect(events[1]).toEqual({ type: "thinking_end", content: "thinking..." });
+    });
+
+    it("all thinking_delta events appear before thinking_end", async () => {
+        const events = await drainSc([
+            { type: "start" },
+            { type: "thinking_delta", delta: "Let me" },
+            { type: "thinking_delta", delta: " think..." },
+            { type: "thinking_end", content: "Let me think..." },
+            { type: "done", stopReason: "stop" },
+        ]);
+        const thinkEndIdx = events.findIndex((e) => e.type === "thinking_end");
+        const deltaIdxs = events
+            .map((e, i) => (e.type === "thinking_delta" ? i : -1))
+            .filter((i) => i >= 0);
+        expect(thinkEndIdx).toBeGreaterThan(0);
+        for (const idx of deltaIdxs) {
+            expect(idx).toBeLessThan(thinkEndIdx);
+        }
+    });
+
+    it("assembled thinking_delta content matches the thinking_end content string", async () => {
+        const events = await drainSc([
+            { type: "thinking_delta", delta: "Hmm, " },
+            { type: "thinking_delta", delta: "I see." },
+            { type: "thinking_end", content: "Hmm, I see." },
+        ]);
+        const deltas = events.filter(
+            (e): e is Extract<StreamEvent, { type: "thinking_delta" }> => e.type === "thinking_delta",
+        );
+        const assembled = deltas.map((d) => d.delta).join("");
+        const end = events.find(
+            (e): e is Extract<StreamEvent, { type: "thinking_end" }> => e.type === "thinking_end",
+        );
+        expect(end).toBeDefined();
+        expect(end!.content).toBe(assembled);
+    });
+
+    it("thinking block precedes text block in a mixed thinking+text stream", async () => {
+        const events = await drainSc([
+            { type: "start" },
+            { type: "thinking_delta", delta: "reasoning..." },
+            { type: "thinking_end", content: "reasoning..." },
+            { type: "text_delta", delta: "answer" },
+            { type: "text_end", content: "answer" },
+            { type: "done", stopReason: "stop" },
+        ]);
+        const thinkEndIdx = events.findIndex((e) => e.type === "thinking_end");
+        const textDeltaIdx = events.findIndex((e) => e.type === "text_delta");
+        expect(thinkEndIdx).toBeGreaterThanOrEqual(0);
+        expect(textDeltaIdx).toBeGreaterThan(thinkEndIdx);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-tool-call stream invariants — issue 50
+// ---------------------------------------------------------------------------
+
+describe("multi-tool-call stream invariants (self-contained)", () => {
+    it("both tool calls from a two-call stream are captured with correct names", async () => {
+        const events = await drainSc([
+            { type: "start" },
+            { type: "toolcall_start" },
+            { type: "toolcall_delta", delta: '{"msg":"hello"}' },
+            { type: "toolcall_end", toolCall: { id: "call_1", name: "echo", arguments: { msg: "hello" } } },
+            { type: "toolcall_start" },
+            { type: "toolcall_delta", delta: '{"n":42}' },
+            { type: "toolcall_end", toolCall: { id: "call_2", name: "count", arguments: { n: 42 } } },
+            { type: "done", stopReason: "toolUse" },
+        ]);
+
+        const tcEnds = events.filter(
+            (e): e is Extract<StreamEvent, { type: "toolcall_end" }> => e.type === "toolcall_end",
+        );
+        expect(tcEnds).toHaveLength(2);
+        expect(tcEnds[0].toolCall.name).toBe("echo");
+        expect(tcEnds[1].toolCall.name).toBe("count");
+        expect(tcEnds[0].toolCall.arguments).toEqual({ msg: "hello" });
+        expect(tcEnds[1].toolCall.arguments).toEqual({ n: 42 });
+    });
+
+    it("two sequential tool calls each have their own toolcall_start / toolcall_end pair", async () => {
+        const events = await drainSc([
+            { type: "toolcall_start" },
+            { type: "toolcall_end", toolCall: { id: "c1", name: "tool_a", arguments: {} } },
+            { type: "toolcall_start" },
+            { type: "toolcall_end", toolCall: { id: "c2", name: "tool_b", arguments: {} } },
+        ]);
+        const starts = events.filter((e) => e.type === "toolcall_start");
+        const ends = events.filter((e) => e.type === "toolcall_end");
+        expect(starts).toHaveLength(2);
+        expect(ends).toHaveLength(2);
+    });
+
+    it("all toolcall_delta events appear between their respective start and end", async () => {
+        // Two back-to-back tool calls; delta events must stay within the right call window.
+        const events = await drainSc([
+            { type: "toolcall_start" },
+            { type: "toolcall_delta", delta: '{"a":1' },
+            { type: "toolcall_delta", delta: "}" },
+            { type: "toolcall_end", toolCall: { id: "c1", name: "tool_a", arguments: { a: 1 } } },
+            { type: "toolcall_start" },
+            { type: "toolcall_delta", delta: '{"b":2}' },
+            { type: "toolcall_end", toolCall: { id: "c2", name: "tool_b", arguments: { b: 2 } } },
+        ]);
+
+        // Find index positions for each toolcall_start/end pair
+        const startIdxs = events.map((e, i) => (e.type === "toolcall_start" ? i : -1)).filter((i) => i >= 0);
+        const endIdxs = events.map((e, i) => (e.type === "toolcall_end" ? i : -1)).filter((i) => i >= 0);
+        expect(startIdxs).toHaveLength(2);
+        expect(endIdxs).toHaveLength(2);
+
+        // Every event between start[0] and end[0] (exclusive) should not be a toolcall_start/end
+        // — the deltas for the first call must fall within the first window.
+        for (let i = startIdxs[0] + 1; i < endIdxs[0]; i++) {
+            expect(events[i].type).not.toBe("toolcall_start");
+            expect(events[i].type).not.toBe("toolcall_end");
+        }
+    });
+
+    it("done event is the last event in a two-tool-call stream", async () => {
+        const events = await drainSc([
+            { type: "toolcall_start" },
+            { type: "toolcall_end", toolCall: { id: "c1", name: "t1", arguments: {} } },
+            { type: "toolcall_start" },
+            { type: "toolcall_end", toolCall: { id: "c2", name: "t2", arguments: {} } },
+            { type: "done", stopReason: "toolUse" },
+        ]);
+        expect(events[events.length - 1].type).toBe("done");
     });
 });

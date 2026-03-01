@@ -6,7 +6,7 @@
  * Integration tests point this app at the openai-mock server.
  */
 
-import { createClawtools } from "clawtools";
+import { createClawtoolsSync } from "clawtools";
 import { jsonResult } from "clawtools/tools";
 import { resolveAuth } from "clawtools/connectors";
 import type { ModelDescriptor, StreamEvent } from "clawtools";
@@ -40,7 +40,7 @@ export interface AppResult {
  */
 export function createTestApp(config: AppConfig) {
     // ── Create a clawtools instance (no core tools — keep tests fast) ────────
-    const ct = createClawtools({ skipCoreTools: true });
+    const ct = createClawtoolsSync({ skipCoreTools: true });
 
     const model: ModelDescriptor = {
         id: "gpt-4o-mini",

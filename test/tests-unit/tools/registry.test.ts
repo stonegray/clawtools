@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ToolRegistry } from "clawtools/tools";
 import {
     echoTool,
@@ -117,6 +117,37 @@ describe("ToolRegistry", () => {
             expect(tools).toHaveLength(1);
             expect(tools[0].name).toBe("echo");
         });
+
+        it("invokes the onError callback with the tool meta and thrown error when a factory throws", () => {
+            // Issue 43: verify the positive path — the callback IS called with the
+            // correct tool ID and error object, not just silently discarded.
+            const boom = new Error("factory boom");
+            const onError = vi.fn();
+
+            registry.registerFactory(
+                () => {
+                    throw boom;
+                },
+                {
+                    id: "boom_tool",
+                    label: "Boom",
+                    description: "",
+                    sectionId: "test",
+                    profiles: ["full"],
+                    source: "core",
+                },
+            );
+            registry.register(echoTool);
+
+            registry.resolveAll(undefined, onError);
+
+            // Callback must be called exactly once — for the one throwing factory
+            expect(onError).toHaveBeenCalledOnce();
+            // First argument is the ToolMeta for the failing factory
+            expect(onError.mock.calls[0][0].id).toBe("boom_tool");
+            // Second argument is the exact error that was thrown
+            expect(onError.mock.calls[0][1]).toBe(boom);
+        });
     });
 
     describe("resolve", () => {
@@ -159,6 +190,41 @@ describe("ToolRegistry", () => {
         it('"messaging" includes messaging-profile tools', () => {
             const tools = registry.resolveByProfile("messaging");
             expect(tools.map((t) => t.name)).toContain("full_tool");
+        });
+
+        it('"full"-profile-only tool appears in "full" but not in specific-profile queries (bug #6 fix)', () => {
+            // A tool whose profiles array contains only "full" should be included by the
+            // full-wildcard query, but excluded from all named-profile queries because
+            // the named-profile path checks profiles.includes(profile), not profile === "full".
+            registry.register(throwingTool, {
+                id: "full_only_tool",
+                sectionId: "test",
+                profiles: ["full"],
+            });
+            expect(registry.resolveByProfile("full").map((t) => t.name)).toContain("throwing_tool");
+            expect(registry.resolveByProfile("coding").map((t) => t.name)).not.toContain("throwing_tool");
+            expect(registry.resolveByProfile("messaging").map((t) => t.name)).not.toContain("throwing_tool");
+            expect(registry.resolveByProfile("minimal").map((t) => t.name)).not.toContain("throwing_tool");
+        });
+
+        it("tool with empty profiles array appears only in the \"full\" wildcard query", () => {
+            // An empty profiles array means the tool is intentionally excluded from all
+            // named profiles; only the wildcard "full" query surfaces it.
+            const emptyProfileTool = {
+                name: "empty_profile_tool",
+                description: "Has no profiles",
+                parameters: { type: "object" as const, properties: {} },
+                execute: async () => ({ content: [] as [] }),
+            };
+            registry.register(emptyProfileTool, {
+                id: "empty_profiles_tool",
+                sectionId: "test",
+                profiles: [],
+            });
+            expect(registry.resolveByProfile("full").map((t) => t.name)).toContain("empty_profile_tool");
+            expect(registry.resolveByProfile("coding").map((t) => t.name)).not.toContain("empty_profile_tool");
+            expect(registry.resolveByProfile("messaging").map((t) => t.name)).not.toContain("empty_profile_tool");
+            expect(registry.resolveByProfile("minimal").map((t) => t.name)).not.toContain("empty_profile_tool");
         });
     });
 

@@ -108,7 +108,6 @@ Full `ToolResultMessage` shape:
 | `toolName` | `string` | Name of the tool that was called. |
 | `content` | `Array<{ type: "text"; text: string } \| { type: "image"; data: string; mimeType: string }>` | One or more result blocks. |
 | `isError` | `boolean` | Set to `true` if the tool call failed. |
-| `details` | `unknown` | Optional structured payload (passed through, not shown to the LLM). |
 
 ## Message flow in a tool-use loop
 

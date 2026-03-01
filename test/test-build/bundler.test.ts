@@ -594,8 +594,8 @@ describe.skipIf(!DIST_BUILT)("5. Discovery integration", () => {
     const MINIMUM_RESOLVED = 17; // exec + web* + sessions* + subagents + browser + canvas + message + cron + gateway + nodes + agents_list + tts
 
     it("emits no warnings when bundles are present", async () => {
-        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href) as any;
-        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href) as any;
+        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href);
+        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href);
 
         const registry = new ToolRegistry();
         const warnings: string[] = [];
@@ -613,8 +613,8 @@ describe.skipIf(!DIST_BUILT)("5. Discovery integration", () => {
     });
 
     it("registry contains all 23 tool metadata entries after discovery", async () => {
-        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href) as any;
-        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href) as any;
+        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href);
+        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href);
 
         const registry = new ToolRegistry();
         await discoverCoreToolsAsync(registry);
@@ -623,8 +623,8 @@ describe.skipIf(!DIST_BUILT)("5. Discovery integration", () => {
     });
 
     it(`resolves at least ${MINIMUM_RESOLVED} tools with a valid AgentTool shape`, async () => {
-        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href) as any;
-        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href) as any;
+        const { ToolRegistry } = await import(pathToFileURL(DIST_REG_PATH).href);
+        const { discoverCoreToolsAsync } = await import(pathToFileURL(DIST_DIS_PATH).href);
 
         const registry = new ToolRegistry();
         await discoverCoreToolsAsync(registry);

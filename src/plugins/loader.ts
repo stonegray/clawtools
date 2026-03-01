@@ -12,12 +12,11 @@
  * @module
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type {
     Connector,
     PluginApi,
-    PluginDefinition,
     Tool,
     ToolFactory,
 } from "../types.js";
@@ -196,7 +195,9 @@ async function loadSinglePlugin(
     // Load module
     const mod = await import(entryPath);
 
-    // Resolve the export
+    // Prefer the default export; fall back to the module namespace so that
+    // `export function register(api) {}` (named export, no default) also works.
+    // See resolveRegisterFunction for the full resolution order.
     const resolved = mod.default ?? mod;
     const registerFn = resolveRegisterFunction(resolved);
     if (!registerFn) return null;
@@ -221,12 +222,12 @@ async function loadSinglePlugin(
         registerTool(toolOrFactory, opts) {
             if (typeof toolOrFactory === "function") {
                 toolFactories.push({
-                    factory: toolOrFactory as ToolFactory,
+                    factory: toolOrFactory,
                     names: opts?.names ?? (opts?.name ? [opts.name] : undefined),
                     optional: opts?.optional,
                 });
             } else {
-                tools.push(toolOrFactory as Tool);
+                tools.push(toolOrFactory);
             }
         },
 
@@ -265,6 +266,21 @@ async function loadSinglePlugin(
     };
 }
 
+/**
+ * Resolve the register/activate function from a loaded plugin module.
+ *
+ * Resolution order (applied to `mod.default ?? mod`):
+ * 1. If the resolved value **is a function** — used directly as the register fn.
+ * 2. If the resolved value is an **object with a `register` method** — that
+ *    method is called.
+ * 3. If the resolved value is an **object with an `activate` method** — that
+ *    method is called.
+ *
+ * Because the default export is checked before named exports, a `default`
+ * export always takes precedence. A bare named `plugin` export
+ * (e.g. `export const plugin = { register: fn }`) is **not** recognised —
+ * plugins must use one of the patterns above.
+ */
 function resolveRegisterFunction(
     mod: unknown,
 ): ((api: PluginApi) => void | Promise<void>) | null {

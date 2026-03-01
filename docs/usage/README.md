@@ -22,7 +22,7 @@ clawtools wraps OpenClaw's tool and connector systems as a standalone NPM packag
 ## Package entry points
 
 ```
-clawtools          → main API: createClawtools, createClawtoolsAsync, all registries and types
+clawtools          → main API: createClawtools, createClawtoolsSync, all registries and types
 clawtools/tools    → ToolRegistry, discovery, result helpers, param readers, schema utils
 clawtools/connectors → ConnectorRegistry, resolveAuth, discoverExtensions, builtins
 clawtools/plugins  → loadPlugins
@@ -32,7 +32,7 @@ clawtools/plugins  → loadPlugins
 
 | File | Contents |
 |------|----------|
-| [getting-started.md](./getting-started.md) | `createClawtools`, `createClawtoolsAsync`, `ClawtoolsOptions`, architecture |
+| [getting-started.md](./getting-started.md) | `createClawtools`, `createClawtoolsSync`, `ClawtoolsOptions`, architecture |
 | [tools.md](./tools.md) | `ToolRegistry` full API, discovery, core tool catalog, profiles, tool groups |
 | [tool-helpers.md](./tool-helpers.md) | Result builders, parameter readers, schema utilities, error classes |
 | [connectors.md](./connectors.md) | `ConnectorRegistry`, `resolveAuth`, built-in connectors, streaming |
@@ -43,10 +43,10 @@ clawtools/plugins  → loadPlugins
 ## Minimal quick-start
 
 ```ts
-import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+import { createClawtools, createNodeBridge } from "clawtools";
 import { extractToolSchemas } from "clawtools/tools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 // List all tools
@@ -63,7 +63,7 @@ const tools = ct.tools.resolveAll({
 
 // Stream a response
 const connector = ct.connectors.getByProvider("anthropic");
-const model = connector.models!.find(m => m.id === "claude-opus-4-6")!;
+const model = connector.models.find(m => m.id === "claude-opus-4-6")!;
 for await (const event of connector.stream(model, {
   systemPrompt: "You are a helpful assistant.",
   messages: [{ role: "user", content: "Hello!" }],

@@ -2,7 +2,7 @@
 
 A complete working agentic loop using clawtools:
 
-1. **Init** — `createClawtoolsAsync()` loads tools and connectors
+1. **Init** — `createClawtools()` loads tools and connectors
 2. **Resolve** — `ct.tools.resolveAll({ root, bridge })` materialises tools for the workspace
 3. **Stream** — call the LLM with the user message and tool schemas
 4. **Tool use** — on `toolcall_end`: execute the tool, construct a `ToolResultMessage`, append to history

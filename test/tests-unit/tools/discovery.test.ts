@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ToolRegistry, getCoreToolCatalog, getCoreSections, discoverCoreTools } from "clawtools/tools";
+import { ToolRegistry, getCoreToolCatalog, getCoreSections, discoverCoreTools, discoverCoreToolsAsync } from "clawtools/tools";
 
 describe("Tool discovery", () => {
     // ---------------------------------------------------------------------------
@@ -8,7 +8,53 @@ describe("Tool discovery", () => {
 
     describe("getCoreToolCatalog", () => {
         it("returns 23 tools", () => {
+            // 23 = sum of all entries in CORE_TOOL_CATALOG (src/tools/discovery.ts)
+            // Breakdown by section:
+            //   fs (3):         read, write, edit
+            //   runtime (1):    exec
+            //   web (2):        web_search, web_fetch
+            //   memory (2):     memory_search, memory_get
+            //   sessions (6):   sessions_list, sessions_history, sessions_send,
+            //                   sessions_spawn, subagents, session_status
+            //   ui (2):         browser, canvas
+            //   messaging (1):  message
+            //   automation (2): cron, gateway
+            //   nodes (1):      nodes
+            //   agents (1):     agents_list
+            //   media (2):      image, tts
+            // If this number changes, update the breakdown above AND the ID snapshot below.
             expect(getCoreToolCatalog()).toHaveLength(23);
+        });
+
+        it("tool ID list matches the expected set (regression anchor for issue 45)", () => {
+            // Snapshot of all 23 tool IDs in sorted order.
+            // A failure here tells you exactly which tool was added or removed.
+            const ids = getCoreToolCatalog().map((t) => t.id).sort();
+            expect(ids).toEqual([
+                "agents_list",
+                "browser",
+                "canvas",
+                "cron",
+                "edit",
+                "exec",
+                "gateway",
+                "image",
+                "memory_get",
+                "memory_search",
+                "message",
+                "nodes",
+                "read",
+                "session_status",
+                "sessions_history",
+                "sessions_list",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "tts",
+                "web_fetch",
+                "web_search",
+                "write",
+            ]);
         });
 
         it("all entries have required fields", () => {
@@ -66,9 +112,21 @@ describe("Tool discovery", () => {
 
     describe("discoverCoreTools", () => {
         it("registers 23 tools into a new registry", () => {
+            // 23 = total tool count; see getCoreToolCatalog count test for breakdown.
             const registry = new ToolRegistry();
             discoverCoreTools(registry);
             expect(registry.size).toBe(23);
+        });
+
+        it("resolveAll() returns [] for a sync-populated registry (issue 44: null-factory invariant)", () => {
+            // discoverCoreTools registers null-returning stub factories for
+            // catalog / metadata use only.  Every stub returns null so that
+            // registry.resolveAll() yields an empty array, which is the correct
+            // signal that tools need to be loaded via discoverCoreToolsAsync()
+            // before they can execute.
+            const registry = new ToolRegistry();
+            discoverCoreTools(registry);
+            expect(registry.resolveAll()).toEqual([]);
         });
 
         it("tool metadata is in the registry without loading modules", () => {
@@ -122,6 +180,74 @@ describe("Tool discovery", () => {
             // Registering everything twice should not double the count
             discoverCoreTools(registry);
             expect(registry.size).toBe(23);
+        });
+    });
+
+    // ---------------------------------------------------------------------------
+    // discoverCoreToolsAsync
+    // ---------------------------------------------------------------------------
+
+    describe("discoverCoreToolsAsync", () => {
+        it("resolveAll() returns [] before the promise resolves (issue 42: lazy-load invariant)", async () => {
+            // Start discovery without awaiting.  The async function suspends at its
+            // first await inside discoverFromBundles/discoverFromSource, so no
+            // factories have been registered yet by the time the next line runs.
+            //
+            // Use a non-existent openclawRoot to prevent the source-fallback path
+            // from trying to import from the real openclaw submodule, which would
+            // cascade into a long import chain and time out the test.
+            const registry = new ToolRegistry();
+            const promise = discoverCoreToolsAsync(registry, {
+                include: ["read"],
+                openclawRoot: "/nonexistent-root-for-lazy-load-test",
+            });
+
+            // Registry is still empty — no factories registered synchronously
+            expect(registry.size).toBe(0);
+            expect(registry.resolveAll()).toEqual([]);
+
+            await promise;
+
+            // After resolution the catalog entry for "read" is registered
+            // (ghost registration: factory returns null since openclawRoot is fake)
+            expect(registry.size).toBe(1);
+            expect(registry.has("read")).toBe(true);
+        });
+
+        it("registers factories for all tools matching an include filter", async () => {
+            const registry = new ToolRegistry();
+            await discoverCoreToolsAsync(registry, {
+                include: ["read", "write", "exec"],
+                openclawRoot: "/nonexistent-root-for-filter-test",
+            });
+            expect(registry.size).toBe(3);
+            expect(registry.has("read")).toBe(true);
+            expect(registry.has("write")).toBe(true);
+            expect(registry.has("exec")).toBe(true);
+        });
+
+        it("source-path fallback: catalog entry is registered even when openclawRoot is missing (issue 52)", async () => {
+            // This test directly exercises the source-path fallback code path.
+            // When pre-built bundles are present (post-build), discoverFromBundles
+            // runs instead and the openclawRoot option is ignored.  In a pre-build
+            // environment (no dist/core-tools/ bundles), discoverFromSource runs
+            // and the missing root triggers the onLoadWarning callback while still
+            // registering null-returning stub factories for catalog use — exactly
+            // the same guarantee that discoverCoreTools (sync) provides.
+            const registry = new ToolRegistry();
+            const warnings: string[] = [];
+
+            await discoverCoreToolsAsync(registry, {
+                include: ["read"],
+                openclawRoot: "/definitely-nonexistent-source-root-for-unit-test",
+                onLoadWarning: (msg) => warnings.push(msg),
+            });
+
+            // Catalog entry is always registered regardless of bundle/source availability
+            expect(registry.size).toBe(1);
+            expect(registry.has("read")).toBe(true);
+            expect(registry.list()[0].id).toBe("read");
+            expect(registry.list()[0].source).toBe("core");
         });
     });
 });

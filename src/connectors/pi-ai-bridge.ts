@@ -5,7 +5,7 @@
  * This module is **not imported at runtime directly**. It is compiled and
  * bundled at build time (via `scripts/bundle-core-connectors.mjs`) into
  * `dist/core-connectors/builtins.js` with all provider SDKs and pi-ai code
- * inlined. At runtime, `discoverBuiltinConnectorsAsync()` dynamically imports
+ * inlined. At runtime, `discoverBuiltinConnectors()` dynamically imports
  * that bundle.
  *
  * ## Event mapping
@@ -21,7 +21,7 @@
  * | thinking_start           | (skipped — no content) |
  * | thinking_delta           | thinking_delta         |
  * | thinking_end             | thinking_end           |
- * | toolcall_start           | toolcall_start         |
+ * | toolcall_start           | toolcall_start (+ id?) |
  * | toolcall_delta           | toolcall_delta         |
  * | toolcall_end             | toolcall_end           |
  * | done                     | done (with usage)      |
@@ -32,7 +32,8 @@
 
 import { stream as piStream, getProviders, getModels } from "@mariozechner/pi-ai";
 import type { AssistantMessageEvent, Model, Api } from "@mariozechner/pi-ai";
-import type { Connector, ModelDescriptor, StreamContext, StreamOptions, StreamEvent } from "../types.js";
+import type { Connector, ModelDescriptor, StreamContext, StreamEvent } from "../types.js";
+import { debugConnector } from "./debug-connector.js";
 
 // =============================================================================
 // Event adapter
@@ -42,9 +43,10 @@ import type { Connector, ModelDescriptor, StreamContext, StreamOptions, StreamEv
  * Adapt an async iterable of pi-ai `AssistantMessageEvent`s into clawtools
  * `StreamEvent`s.
  *
- * `text_start`, `thinking_start`, and `toolcall_start` (the positional kind)
- * carry no content yet, so they are suppressed — the corresponding `_delta` /
- * `_end` events provide all the data the consumer needs.
+ * `text_start` and `thinking_start` carry no content, so they are suppressed
+ * — the corresponding `_delta` / `_end` events provide all the data the
+ * consumer needs. `toolcall_start` is forwarded (with the optional `id` when
+ * the provider makes it available at call-start time).
  */
 async function* adaptEvents(
     events: AsyncIterable<AssistantMessageEvent>,
@@ -71,13 +73,39 @@ async function* adaptEvents(
                 yield { type: "thinking_end", content: ev.content };
                 break;
 
-            case "toolcall_start":
-                yield { type: "toolcall_start" };
+            case "toolcall_start": {
+                // Extract the tool call id from the partial message when available.
+                // The id is set on the toolCall block at content_block_start time by
+                // Anthropic (and similar providers), so it is available before any deltas.
+                const partialContent = ev.partial?.content;
+                const toolCallBlock = Array.isArray(partialContent)
+                    ? partialContent[ev.contentIndex]
+                    : undefined;
+                const startId =
+                    toolCallBlock && "id" in toolCallBlock && typeof toolCallBlock.id === "string"
+                        ? toolCallBlock.id
+                        : undefined;
+                yield startId !== undefined
+                    ? { type: "toolcall_start", id: startId }
+                    : { type: "toolcall_start" };
                 break;
+            }
 
-            case "toolcall_delta":
-                yield { type: "toolcall_delta", delta: ev.delta };
+            case "toolcall_delta": {
+                // Mirror the id from toolcall_start so consumers can correlate deltas.
+                const deltaContent = ev.partial?.content;
+                const deltaBlock = Array.isArray(deltaContent)
+                    ? deltaContent[ev.contentIndex]
+                    : undefined;
+                const deltaId =
+                    deltaBlock && "id" in deltaBlock && typeof deltaBlock.id === "string"
+                        ? deltaBlock.id
+                        : undefined;
+                yield deltaId !== undefined
+                    ? { type: "toolcall_delta", delta: ev.delta, id: deltaId }
+                    : { type: "toolcall_delta", delta: ev.delta };
                 break;
+            }
 
             case "toolcall_end":
                 yield {
@@ -102,9 +130,15 @@ async function* adaptEvents(
                 break;
 
             case "error":
+                if (ev.error === undefined) {
+                    console.warn(
+                        "[clawtools] pi-ai-bridge: received error event with unexpected shape (ev.error is undefined)",
+                        ev,
+                    );
+                }
                 yield {
                     type: "error",
-                    error: ev.error.errorMessage ?? `LLM provider error (${ev.reason})`,
+                    error: ev.error?.errorMessage ?? `LLM provider error (${ev.reason})`,
                 };
                 break;
 
@@ -179,6 +213,20 @@ function toContext(ctx: StreamContext): {
     messages: any[];
     tools?: Array<{ name: string; description: string; parameters: unknown }>;
 } {
+    // Issue 16: runtime shape check — every message must have a string `role`.
+    for (let i = 0; i < ctx.messages.length; i++) {
+        const msg = ctx.messages[i];
+        if (
+            msg === null ||
+            typeof msg !== "object" ||
+            typeof (msg as unknown as Record<string, unknown>)["role"] !== "string"
+        ) {
+            throw new TypeError(
+                `[clawtools] pi-ai-bridge: message at index ${i} is missing a required string 'role' field`,
+            );
+        }
+    }
+
     return {
         systemPrompt: ctx.systemPrompt,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -204,6 +252,11 @@ function toContext(ctx: StreamContext): {
  */
 function buildConnector(provider: string): Connector {
     const piModels = getModels(provider as Parameters<typeof getModels>[0]);
+    if (piModels.length === 0) {
+        console.warn(
+            `[clawtools] Pi-ai connector: provider '${provider}' has no models defined`,
+        );
+    }
     const modelMap = new Map<string, Model<Api>>(piModels.map((m) => [m.id, m]));
 
     return {
@@ -227,7 +280,7 @@ function buildConnector(provider: string): Connector {
 
             yield* adaptEvents(
                 piStream(
-                    piModel as Parameters<typeof piStream>[0],
+                    piModel,
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     piContext as any,
                     options as Parameters<typeof piStream>[2],
@@ -252,5 +305,5 @@ function buildConnector(provider: string): Connector {
  * @returns Array of connectors — one per pi-ai provider.
  */
 export function getBuiltinConnectors(): Connector[] {
-    return getProviders().map(buildConnector);
+    return [...getProviders().map(buildConnector), debugConnector];
 }

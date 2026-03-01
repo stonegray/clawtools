@@ -1,5 +1,5 @@
 /**
- * Unit tests: createClawtools / createClawtoolsAsync public API.
+ * Unit tests: createClawtoolsSync / createClawtools (async) public API.
  *
  * These tests verify that the top-level factory functions return correctly
  * structured instances, that registries start in the right state, and that
@@ -13,7 +13,7 @@ import { describe, it, expect } from "vitest";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createClawtools, createClawtoolsAsync } from "clawtools";
+import { createClawtoolsSync, createClawtools, createClawtoolsAsync } from "clawtools";
 import { ToolRegistry } from "clawtools/tools";
 import { ConnectorRegistry } from "clawtools/connectors";
 
@@ -21,46 +21,46 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const BUNDLES_BUILT = existsSync(resolve(ROOT, "dist/core-connectors/builtins.js"));
 
 // ---------------------------------------------------------------------------
-// createClawtools (sync)
+// createClawtoolsSync (sync)
 // ---------------------------------------------------------------------------
 
-describe("createClawtools", () => {
+describe("createClawtoolsSync", () => {
     describe("return shape", () => {
         it("returns an object with tools, connectors, and extensions", () => {
-            const ct = createClawtools({ skipCoreTools: true });
+            const ct = createClawtoolsSync({ skipCoreTools: true });
             expect(ct).toHaveProperty("tools");
             expect(ct).toHaveProperty("connectors");
             expect(ct).toHaveProperty("extensions");
         });
 
         it("tools is a ToolRegistry instance", () => {
-            expect(createClawtools({ skipCoreTools: true }).tools).toBeInstanceOf(ToolRegistry);
+            expect(createClawtoolsSync({ skipCoreTools: true }).tools).toBeInstanceOf(ToolRegistry);
         });
 
         it("connectors is a ConnectorRegistry instance", () => {
-            expect(createClawtools({ skipCoreTools: true }).connectors).toBeInstanceOf(ConnectorRegistry);
+            expect(createClawtoolsSync({ skipCoreTools: true }).connectors).toBeInstanceOf(ConnectorRegistry);
         });
 
         it("extensions is an array", () => {
-            expect(Array.isArray(createClawtools({ skipCoreTools: true }).extensions)).toBe(true);
+            expect(Array.isArray(createClawtoolsSync({ skipCoreTools: true }).extensions)).toBe(true);
         });
     });
 
     describe("skipCoreTools option", () => {
         it("skipCoreTools:true → empty tool registry", () => {
-            expect(createClawtools({ skipCoreTools: true }).tools.size).toBe(0);
+            expect(createClawtoolsSync({ skipCoreTools: true }).tools.size).toBe(0);
         });
     });
 
     describe("initial state", () => {
         it("connector registry starts empty", () => {
-            expect(createClawtools({ skipCoreTools: true }).connectors.size).toBe(0);
+            expect(createClawtoolsSync({ skipCoreTools: true }).connectors.size).toBe(0);
         });
     });
 
     describe("mutability after creation", () => {
         it("can register a tool after creation", () => {
-            const ct = createClawtools({ skipCoreTools: true });
+            const ct = createClawtoolsSync({ skipCoreTools: true });
             ct.tools.register({
                 name: "post_create_tool",
                 description: "added after init",
@@ -72,12 +72,13 @@ describe("createClawtools", () => {
         });
 
         it("can register a connector after creation", () => {
-            const ct = createClawtools({ skipCoreTools: true });
+            const ct = createClawtoolsSync({ skipCoreTools: true });
             ct.connectors.register({
                 id: "post-create-conn",
                 label: "Post-create",
                 provider: "post-create",
                 api: "openai-completions",
+                models: [],
                 async *stream() {
                     yield { type: "done", stopReason: "stop" };
                 },
@@ -88,8 +89,8 @@ describe("createClawtools", () => {
 
     describe("instance isolation", () => {
         it("two calls return independent instances", () => {
-            const ct1 = createClawtools({ skipCoreTools: true });
-            const ct2 = createClawtools({ skipCoreTools: true });
+            const ct1 = createClawtoolsSync({ skipCoreTools: true });
+            const ct2 = createClawtoolsSync({ skipCoreTools: true });
             ct1.tools.register({
                 name: "only_in_ct1",
                 description: "x",
@@ -101,27 +102,27 @@ describe("createClawtools", () => {
         });
 
         it("tool registry instances are distinct objects", () => {
-            const ct1 = createClawtools({ skipCoreTools: true });
-            const ct2 = createClawtools({ skipCoreTools: true });
+            const ct1 = createClawtoolsSync({ skipCoreTools: true });
+            const ct2 = createClawtoolsSync({ skipCoreTools: true });
             expect(ct1.tools).not.toBe(ct2.tools);
         });
 
         it("connector registry instances are distinct objects", () => {
-            const ct1 = createClawtools({ skipCoreTools: true });
-            const ct2 = createClawtools({ skipCoreTools: true });
+            const ct1 = createClawtoolsSync({ skipCoreTools: true });
+            const ct2 = createClawtoolsSync({ skipCoreTools: true });
             expect(ct1.connectors).not.toBe(ct2.connectors);
         });
     });
 });
 
 // ---------------------------------------------------------------------------
-// createClawtoolsAsync
+// createClawtools (async — new canonical name)
 // ---------------------------------------------------------------------------
 
-describe("createClawtoolsAsync", () => {
+describe("createClawtools (async)", () => {
     describe("return shape", () => {
         it("resolves to an object with tools, connectors, and extensions", async () => {
-            const ct = await createClawtoolsAsync({
+            const ct = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -131,7 +132,7 @@ describe("createClawtoolsAsync", () => {
         });
 
         it("tools is a ToolRegistry instance", async () => {
-            const ct = await createClawtoolsAsync({
+            const ct = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -139,7 +140,7 @@ describe("createClawtoolsAsync", () => {
         });
 
         it("connectors is a ConnectorRegistry instance", async () => {
-            const ct = await createClawtoolsAsync({
+            const ct = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -147,7 +148,7 @@ describe("createClawtoolsAsync", () => {
         });
 
         it("extensions is an array", async () => {
-            const ct = await createClawtoolsAsync({
+            const ct = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -157,7 +158,7 @@ describe("createClawtoolsAsync", () => {
 
     describe("skipCoreTools + skipBuiltinConnectors", () => {
         it("both skipped → empty tool and connector registries", async () => {
-            const ct = await createClawtoolsAsync({
+            const ct = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -168,11 +169,11 @@ describe("createClawtoolsAsync", () => {
 
     describe("instance isolation", () => {
         it("two awaits return independent tool registries", async () => {
-            const ct1 = await createClawtoolsAsync({
+            const ct1 = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
-            const ct2 = await createClawtoolsAsync({
+            const ct2 = await createClawtools({
                 skipCoreTools: true,
                 skipBuiltinConnectors: true,
             });
@@ -185,7 +186,7 @@ describe("createClawtoolsAsync", () => {
         it.skipIf(!BUNDLES_BUILT)(
             "skipBuiltinConnectors:false registers connectors from the bundle",
             async () => {
-                const ct = await createClawtoolsAsync({
+                const ct = await createClawtools({
                     skipCoreTools: true,
                     skipBuiltinConnectors: false,
                 });
@@ -197,17 +198,46 @@ describe("createClawtoolsAsync", () => {
         it.skipIf(!BUNDLES_BUILT)(
             "each built-in connector has a provider and model list",
             async () => {
-                const ct = await createClawtoolsAsync({
+                const ct = await createClawtools({
                     skipCoreTools: true,
                     skipBuiltinConnectors: false,
                 });
                 for (const connector of ct.connectors.list()) {
                     expect(connector.provider).toBeTruthy();
                     expect(Array.isArray(connector.models)).toBe(true);
-                    expect(connector.models!.length).toBeGreaterThan(0);
+                    expect(connector.models.length).toBeGreaterThan(0);
                 }
             },
             30_000,
         );
+    });
+});
+
+// ---------------------------------------------------------------------------
+// createClawtoolsAsync — deprecated alias
+// ---------------------------------------------------------------------------
+
+describe("createClawtoolsAsync (deprecated alias)", () => {
+    it("is a function that returns a Promise", () => {
+        expect(typeof createClawtoolsAsync).toBe("function");
+        const result = createClawtoolsAsync({
+            skipCoreTools: true,
+            skipBuiltinConnectors: true,
+        });
+        expect(result).toBeInstanceOf(Promise);
+        // Consume the promise to avoid unhandled rejection
+        return result;
+    });
+
+    it("resolves to the same shape as createClawtools", async () => {
+        const ct = await createClawtoolsAsync({
+            skipCoreTools: true,
+            skipBuiltinConnectors: true,
+        });
+        expect(ct).toHaveProperty("tools");
+        expect(ct).toHaveProperty("connectors");
+        expect(ct).toHaveProperty("extensions");
+        expect(ct.tools).toBeInstanceOf(ToolRegistry);
+        expect(ct.connectors).toBeInstanceOf(ConnectorRegistry);
     });
 });

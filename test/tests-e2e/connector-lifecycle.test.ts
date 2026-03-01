@@ -6,13 +6,12 @@
  * and error handling.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
-    createClawtools,
-    ConnectorRegistry,
+    createClawtoolsSync,
     resolveAuth,
 } from "clawtools";
-import type { Connector, ModelDescriptor, StreamContext, StreamEvent } from "clawtools";
+import type { ModelDescriptor, StreamContext } from "clawtools";
 import { withMockServer } from "../helpers/index.js";
 import { createTestApp } from "../testapp/index.js";
 
@@ -35,13 +34,14 @@ async function drain<T>(iter: AsyncIterable<T>): Promise<T[]> {
 
 describe("custom connector lifecycle", () => {
     it("registers a connector and streams a text response", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register({
             id: "echo-conn",
             label: "Echo Connector",
             provider: "echo",
             api: "openai-completions",
+            models: [],
             async *stream(_model, context, _options) {
                 yield { type: "start" };
                 const lastMsg = context.messages[context.messages.length - 1];
@@ -79,13 +79,14 @@ describe("custom connector lifecycle", () => {
     });
 
     it("lookup by provider and api transport", () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register({
             id: "test-anthropic",
             label: "Test Anthropic",
             provider: "anthropic",
             api: "anthropic-messages",
+            models: [],
             async *stream() {
                 yield { type: "done", stopReason: "stop" };
             },
@@ -96,6 +97,7 @@ describe("custom connector lifecycle", () => {
             label: "Test OpenAI",
             provider: "openai",
             api: "openai-completions",
+            models: [],
             async *stream() {
                 yield { type: "done", stopReason: "stop" };
             },
@@ -217,7 +219,7 @@ describe("connector streaming via mock server", () => {
 
 describe("connector + tool execution e2e", () => {
     it("stream a tool call, then execute the tool, verify result", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         // Register a custom tool
         let toolExecuted = false;

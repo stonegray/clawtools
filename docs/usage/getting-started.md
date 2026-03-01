@@ -6,34 +6,34 @@
 npm install clawtools
 ```
 
-Requires **Node.js ≥ 20**.
+Requires **Node.js ≥ 22**.
 
 ---
 
 ## Two entry functions
 
-### `createClawtools(options?)` — sync, metadata-only
+### `createClawtoolsSync(options?)` — sync, metadata-only
 
 Returns immediately. Core tool factories are registered but **will not execute** — `resolveAll()` returns tools whose `execute` methods do nothing (the underlying modules have not been dynamically imported). Use this when you only need the catalog (names, descriptions, schemas, profiles).
 
 ```ts
-import { createClawtools } from "clawtools";
+import { createClawtoolsSync } from "clawtools";
 
-const ct = createClawtools();
+const ct = createClawtoolsSync();
 
 for (const meta of ct.tools.list()) {
   console.log(`${meta.id}: ${meta.description}`);
 }
 ```
 
-### `createClawtoolsAsync(options?)` — async, fully executable
+### `createClawtools(options?)` — async, fully executable
 
 Awaits ESM dynamic imports for every core tool and (by default) all built-in LLM connectors. After awaiting, tools returned by `resolveAll()` have working `execute` methods and connectors have working `stream` methods.
 
 ```ts
-import { createClawtoolsAsync, createNodeBridge } from "clawtools";
+import { createClawtools, createNodeBridge } from "clawtools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 const tools = ct.tools.resolveAll({
@@ -68,13 +68,13 @@ interface ClawtoolsOptions {
   skipCoreTools?: boolean;
 
   // Skip auto-registration of built-in LLM provider connectors.
-  // Only applies to createClawtoolsAsync(). Default: false (connectors ARE registered).
+  // Only applies to createClawtools(). Default: false (connectors ARE registered).
   skipBuiltinConnectors?: boolean;
 
   // If true, begin loading tools and connectors in the background but return
   // the Clawtools instance immediately without waiting.
   // Await ct.ready before calling resolveAll() or streaming.
-  // Only applies to createClawtoolsAsync(). Has no effect on createClawtools().
+  // Only applies to createClawtools(). Has no effect on createClawtoolsSync().
   lazy?: boolean;
 }
 ```
@@ -82,7 +82,7 @@ interface ClawtoolsOptions {
 **Example — load only specific tools, no connectors:**
 
 ```ts
-const ct = await createClawtoolsAsync({
+const ct = await createClawtools({
   tools: { include: ["read", "write", "exec"] },
   skipBuiltinConnectors: true,
 });
@@ -91,7 +91,7 @@ const ct = await createClawtoolsAsync({
 **Example — load all tools in the `fs` group:**
 
 ```ts
-const ct = await createClawtoolsAsync({
+const ct = await createClawtools({
   tools: { include: ["group:fs"] },
 });
 ```
@@ -101,7 +101,7 @@ const ct = await createClawtoolsAsync({
 Use `lazy: true` when you need catalog metadata (tool names, descriptions, schemas, connector names) immediately at startup but want to defer pulling in provider SDKs until they are actually needed:
 
 ```ts
-const ct = await createClawtoolsAsync({ lazy: true });
+const ct = await createClawtools({ lazy: true });
 
 // Catalog is ready immediately — list tools, filter by profile, etc.
 const meta = ct.tools.list();
@@ -152,7 +152,7 @@ interface ExtensionInfo {
 
 Core tool execution depends on pre-built bundles:
 
-1. **Bundled tools** (production, after `npm run build`): `discoverCoreToolsAsync` loads `dist/core-tools/<tool>.js` bundles via the manifest at `dist/core-tools/manifest.json`. Works in any Node 18+ environment with no TypeScript runtime needed.
+1. **Bundled tools** (production, after `npm run build`): `discoverCoreToolsAsync` loads `dist/core-tools/<tool>.js` bundles via the manifest at `dist/core-tools/manifest.json`. Works in any Node 22+ environment with no TypeScript runtime needed.
 
 2. **Source fallback** (development): If no bundles exist but the openclaw git submodule is present, tools are loaded from `.ts` source files. Requires a TypeScript-capable runtime (vitest, tsx, ts-node, or Node 22+ with `--experimental-strip-types`).
 

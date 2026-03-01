@@ -5,7 +5,7 @@ Connectors are adapters for LLM provider streaming APIs. Each connector wraps a 
 ## Import paths
 
 ```ts
-import { ConnectorRegistry, resolveAuth, discoverBuiltinConnectorsAsync } from "clawtools";
+import { ConnectorRegistry, resolveAuth, discoverBuiltinConnectors } from "clawtools";
 import { ConnectorRegistry, resolveAuth } from "clawtools/connectors";
 ```
 
@@ -89,13 +89,13 @@ Check whether a connector is registered.
 
 ## Built-in connectors
 
-Built-in connectors are backed by `@mariozechner/pi-ai` and cover every provider in that catalog. Load them via `createClawtoolsAsync()` (done automatically unless `skipBuiltinConnectors: true`) or manually:
+Built-in connectors are backed by `@mariozechner/pi-ai` and cover every provider in that catalog. Load them via `createClawtools()` (done automatically unless `skipBuiltinConnectors: true`) or manually:
 
 ```ts
-import { discoverBuiltinConnectorsAsync, ConnectorRegistry } from "clawtools";
+import { discoverBuiltinConnectors, ConnectorRegistry } from "clawtools";
 
 const registry = new ConnectorRegistry();
-const builtins = await discoverBuiltinConnectorsAsync();
+const builtins = await discoverBuiltinConnectors();
 for (const connector of builtins) registry.register(connector);
 
 console.log(registry.listProviders());

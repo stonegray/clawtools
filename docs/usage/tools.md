@@ -14,7 +14,7 @@ import { ToolRegistry, discoverCoreTools, discoverCoreToolsAsync } from "clawtoo
 
 ## `ToolRegistry`
 
-Central catalog and resolver. Both `createClawtools` and `createClawtoolsAsync` expose an already-populated instance at `ct.tools`.
+Central catalog and resolver. Both `createClawtoolsSync` and `createClawtools` expose an already-populated instance at `ct.tools`.
 
 ### Registration
 
@@ -181,7 +181,7 @@ Number of registered tools.
 
 ### `discoverCoreToolsAsync(registry, options?)` → `Promise<void>`
 
-**Async.** Loads pre-built bundles (or source fallback) and registers fully executable factories. This is what `createClawtoolsAsync` uses internally.
+**Async.** Loads pre-built bundles (or source fallback) and registers fully executable factories. This is what `createClawtools` uses internally.
 
 ### `getCoreToolCatalog()` → `ToolMeta[]`
 
@@ -234,8 +234,8 @@ Groups are named aliases for sets of tool IDs, usable in `DiscoveryOptions.inclu
 
 | Group | Tool IDs |
 |-------|----------|
-| `group:fs` | `read`, `write`, `edit`, `apply_patch` |
-| `group:runtime` | `exec`, `process` |
+| `group:fs` | `read`, `write`, `edit` |
+| `group:runtime` | `exec` |
 | `group:web` | `web_search`, `web_fetch` |
 | `group:memory` | `memory_search`, `memory_get` |
 | `group:sessions` | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `subagents`, `session_status` |
@@ -250,7 +250,7 @@ Groups are named aliases for sets of tool IDs, usable in `DiscoveryOptions.inclu
 
 ## Core tool catalog
 
-All 25 built-in tools, their sections, profiles, and descriptions:
+All 23 built-in tools, their sections, profiles, and descriptions:
 
 ### Section: `fs` — Files
 
@@ -427,10 +427,10 @@ The `fs` tool section (`read`, `write`, `edit`) requires a file-system bridge. T
 For local Node.js usage, import `createNodeBridge` and pass it in the context:
 
 ```ts
-import { createClawtoolsAsync } from "clawtools";
+import { createClawtools } from "clawtools";
 import { createNodeBridge } from "clawtools/tools";
 
-const ct = await createClawtoolsAsync();
+const ct = await createClawtools();
 const root = process.cwd();
 
 const tools = ct.tools.resolveAll({

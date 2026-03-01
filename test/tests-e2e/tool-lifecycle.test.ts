@@ -7,9 +7,8 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import {
+    createClawtoolsSync,
     createClawtools,
-    createClawtoolsAsync,
-    ToolRegistry,
     jsonResult,
     textResult,
     errorResult,
@@ -20,17 +19,17 @@ import {
     extractToolSchemas,
     ToolInputError,
 } from "clawtools";
-import type { Tool, ToolContext, ToolFactory, ToolResult } from "clawtools";
+import type { Tool, ToolContext, ToolFactory } from "clawtools";
 
 // ---------------------------------------------------------------------------
 // Custom tool registration + execution
 // ---------------------------------------------------------------------------
 
 describe("custom tool lifecycle", () => {
-    let ct: ReturnType<typeof createClawtools>;
+    let ct: ReturnType<typeof createClawtoolsSync>;
 
     beforeEach(() => {
-        ct = createClawtools({ skipCoreTools: true });
+        ct = createClawtoolsSync({ skipCoreTools: true });
     });
 
     it("registers and executes a minimal tool", async () => {
@@ -154,7 +153,7 @@ describe("custom tool lifecycle", () => {
 
 describe("tool factory lifecycle", () => {
     it("factory receives context and creates tool accordingly", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         const factory: ToolFactory = (ctx: ToolContext) => ({
             name: "workspace_info",
@@ -183,7 +182,7 @@ describe("tool factory lifecycle", () => {
     });
 
     it("factory returning null is silently skipped", () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.tools.registerFactory(() => null, {
             id: "optional_tool",
@@ -201,7 +200,7 @@ describe("tool factory lifecycle", () => {
     });
 
     it("factory returning multiple tools produces all of them", () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.tools.registerFactory(
             () => [
@@ -257,8 +256,8 @@ describe("schema extraction e2e", () => {
         const schema = extractToolSchema(tool);
         expect(schema.name).toBe("search");
         expect(schema.description).toBe("Search for things");
-        expect((schema.input_schema as Record<string, unknown>).type).toBe("object");
-        const props = (schema.input_schema as Record<string, unknown>).properties as Record<string, unknown>;
+        expect(schema.input_schema.type).toBe("object");
+        const props = schema.input_schema.properties as Record<string, unknown>;
         expect(props.query).toBeDefined();
         expect(props.limit).toBeDefined();
     });
@@ -303,8 +302,8 @@ describe("schema extraction e2e", () => {
 // ---------------------------------------------------------------------------
 
 describe("core tool discovery e2e", { timeout: 180_000 }, () => {
-    it("createClawtoolsAsync discovers 23 core tools", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+    it("createClawtools discovers 23 core tools", async () => {
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         expect(ct.tools.size).toBe(23);
 
         const meta = ct.tools.list();
@@ -321,7 +320,7 @@ describe("core tool discovery e2e", { timeout: 180_000 }, () => {
     });
 
     it("resolveAll returns executable tools (≥17 non-null)", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         const tools = ct.tools.resolveAll({ workspaceDir: process.cwd() });
         // Some tools need config to return non-null; at least 15 should resolve
         expect(tools.length).toBeGreaterThanOrEqual(15);
@@ -336,7 +335,7 @@ describe("core tool discovery e2e", { timeout: 180_000 }, () => {
     });
 
     it("resolveByProfile narrows to coding tools only", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         const codingTools = ct.tools.resolveByProfile("coding", { workspaceDir: process.cwd() });
         const fullTools = ct.tools.resolveAll({ workspaceDir: process.cwd() });
         expect(codingTools.length).toBeLessThanOrEqual(fullTools.length);
@@ -344,7 +343,7 @@ describe("core tool discovery e2e", { timeout: 180_000 }, () => {
     });
 
     it("list returns metadata with correct section assignments", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         const meta = ct.tools.list();
         const sectionIds = [...new Set(meta.map((m) => m.sectionId))];
         expect(sectionIds).toContain("fs");
@@ -353,7 +352,7 @@ describe("core tool discovery e2e", { timeout: 180_000 }, () => {
     });
 
     it("listBySection groups tools into the expected sections", async () => {
-        const ct = await createClawtoolsAsync({ skipBuiltinConnectors: true });
+        const ct = await createClawtools({ skipBuiltinConnectors: true });
         const sections = ct.tools.listBySection();
         const fsSection = sections.find((s) => s.id === "fs");
         expect(fsSection).toBeDefined();

@@ -6,8 +6,8 @@
  * invariants hold across scenarios.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { createClawtools } from "clawtools";
+import { describe, it, expect } from "vitest";
+import { createClawtoolsSync } from "clawtools";
 import type {
     StreamEvent,
     ModelDescriptor,
@@ -25,6 +25,7 @@ function createEventConnector(events: StreamEvent[]): Connector {
         label: "Event Test",
         provider: "event-test",
         api: "openai-completions",
+        models: [],
         async *stream() {
             for (const event of events) {
                 yield event;
@@ -261,7 +262,7 @@ describe("full event sequence", () => {
 
 describe("events via ConnectorRegistry", () => {
     it("connector registered in registry streams events correctly", async () => {
-        const ct = createClawtools({ skipCoreTools: true });
+        const ct = createClawtoolsSync({ skipCoreTools: true });
 
         ct.connectors.register(
             createEventConnector([

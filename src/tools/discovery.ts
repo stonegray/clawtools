@@ -442,7 +442,7 @@ const CORE_TOOL_GROUPS: Record<string, string[]> = {
 
 /**
  * Expand group references in a tool ID list.
- * "group:fs" → ["read", "write", "edit", "apply_patch"]
+ * "group:fs" → ["read", "write", "edit"]
  */
 function expandGroups(ids: string[]): Set<string> {
     const result = new Set<string>();
@@ -473,22 +473,26 @@ export function getCoreSections(): ToolSection[] {
  * Return the full core tool catalog metadata (without loading any implementations).
  */
 export function getCoreToolCatalog(): ToolMeta[] {
-    return CORE_TOOL_CATALOG.map(({ factoryModule, factoryName, ...meta }) => meta);
+    return CORE_TOOL_CATALOG.map(({ factoryModule: _factoryModule, factoryName: _factoryName, ...meta }) => meta);
 }
 
 /**
  * Discover and register all core OpenClaw tools into a registry.
  *
- * This reads tool metadata from the catalog and registers lazy factories
- * that deep-link into the openclaw submodule for actual implementations.
+ * **Catalog/metadata use only.** This function immediately registers a
+ * null-returning stub factory for every matching catalog entry — no module
+ * loading occurs and no async I/O is performed. Because every factory always
+ * returns `null`, calling {@link ToolRegistry.resolveAll} on a registry
+ * populated solely by this function will return an empty array (`[]`).
  *
- * **Note:** Factories registered by this function always return `null` at
- * call time because ESM `import()` is asynchronous. Use this function only
- * for catalog/metadata-only use-cases (listing tools, generating schemas).
- * For executable tools use {@link discoverCoreToolsAsync} instead.
+ * Use this only for catalog or metadata use-cases: listing tool names,
+ * descriptions, and sections without needing executable tools.
+ * For tools that can actually execute, use {@link discoverCoreToolsAsync}
+ * instead.
  *
  * @param registry - The registry to populate.
- * @param options - Discovery options (filters, paths).
+ * @param options - Discovery options (filters, paths). Set {@link DiscoveryOptions.onLoadWarning}
+ *   to observe factory-load errors instead of having them silently discarded.
  * @see discoverCoreToolsAsync
  */
 export function discoverCoreTools(
@@ -522,10 +526,10 @@ export function discoverCoreTools(
 // =============================================================================
 
 /**
- * Module cache populated by discoverFromSource for synchronous access inside
- * the bundled tool factories registered during async discovery.
+ * Source module cache — populated by discoverFromSource for synchronous access
+ * inside the tool factories registered during async source-fallback discovery.
  */
-const moduleCache = new Map<string, Record<string, unknown>>();
+const sourceModuleCache = new Map<string, Record<string, unknown>>();
 
 /**
  * Async version of tool discovery that properly handles ESM dynamic imports.
@@ -540,7 +544,8 @@ const moduleCache = new Map<string, Record<string, unknown>>();
  * (metadata available) but their factories return `null` at call time.
  *
  * @param registry - The registry to populate.
- * @param options - Discovery options.
+ * @param options - Discovery options. Set {@link DiscoveryOptions.onLoadWarning}
+ *   to observe factory-load errors instead of having them silently discarded.
  */
 export async function discoverCoreToolsAsync(
     registry: ToolRegistry,
@@ -583,11 +588,14 @@ async function discoverFromBundles(
         if (includeSet && !includeSet.has(entry.id)) continue;
         if (excludeSet.has(entry.id)) continue;
 
-        const { factoryModule, factoryName: catalogFactory, ...meta } = entry;
+        const { factoryModule: _factoryModule, factoryName: _factoryName, ...meta } = entry;
         const bundleInfo = manifest.entries[entry.id];
 
         if (!bundleInfo) {
-            // Tool not in manifest — register with null factory
+            // Ghost registration: this tool has no entry in the bundle manifest.
+            // The null-returning factory is still registered so the tool appears
+            // in registry.list() / getCoreToolCatalog() for catalog enumeration,
+            // but registry.resolveAll() will silently skip it (factory → null → []).
             registry.registerFactory(() => null, meta);
             failedCount++;
             continue;
@@ -684,15 +692,20 @@ async function discoverFromSource(
         // (vitest/tsx/ts-node) that can dynamically import .ts files.
         try {
             const mod = (await import(modulePath)) as Record<string, unknown>;
-            moduleCache.set(modulePath, mod);
+            sourceModuleCache.set(modulePath, mod);
             loadedCount++;
         } catch {
             failedCount++;
         }
 
+        // Ghost registration: the factory is always registered regardless of
+        // whether the module loaded above. If the import failed, sourceModuleCache
+        // will have no entry for this path and the factory always returns null,
+        // so the tool appears in registry.list() / getCoreToolCatalog() but
+        // registry.resolveAll() will silently skip it (factory → null → []).
         registry.registerFactory(
             (ctx: ToolContext) => {
-                const mod = moduleCache.get(modulePath);
+                const mod = sourceModuleCache.get(modulePath);
                 if (!mod) return null;
                 const factory = mod[factoryName];
                 if (typeof factory !== "function") return null;

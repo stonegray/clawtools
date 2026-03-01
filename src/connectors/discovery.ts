@@ -160,6 +160,9 @@ function resolveConnectorBundle(): string {
     return join(distDir, "core-connectors", "builtins.js");
 }
 
+// Module-level cache — populated on first call to discoverBuiltinConnectors().
+let _builtinConnectorsCache: Promise<Connector[]> | undefined;
+
 /**
  * Discover and return all built-in LLM connectors.
  *
@@ -176,10 +179,27 @@ function resolveConnectorBundle(): string {
  *    back to importing `src/connectors/pi-ai-bridge.ts` directly. Requires a
  *    TypeScript-capable runtime (vitest, tsx, ts-node).
  *
+ * ## Caching
+ *
+ * The result is memoised after the first successful call. Calling this
+ * function multiple times is safe and cheap — subsequent calls return the
+ * same array instance without repeating the dynamic import or filesystem
+ * check. The cache is module-level, so it persists for the lifetime of the
+ * process.
+ *
  * @returns Array of fully executable `Connector` objects, or an empty array if
  *          the connector bundle is not available.
  */
-export async function discoverBuiltinConnectorsAsync(): Promise<Connector[]> {
+export function discoverBuiltinConnectors(): Promise<Connector[]> {
+    if (_builtinConnectorsCache !== undefined) {
+        return _builtinConnectorsCache;
+    }
+    _builtinConnectorsCache = _loadBuiltinConnectors();
+    return _builtinConnectorsCache;
+}
+
+/** Internal implementation — call discoverBuiltinConnectors() externally. */
+async function _loadBuiltinConnectors(): Promise<Connector[]> {
     // Try bundled output first
     const bundlePath = resolveConnectorBundle();
     if (existsSync(bundlePath)) {
@@ -212,4 +232,12 @@ export async function discoverBuiltinConnectorsAsync(): Promise<Connector[]> {
     }
 
     return [];
+}
+
+/**
+ * @deprecated Use {@link discoverBuiltinConnectors} instead.
+ * Renamed to drop the `Async` suffix per the async-by-default naming convention.
+ */
+export async function discoverBuiltinConnectorsAsync(): Promise<Connector[]> {
+    return discoverBuiltinConnectors();
 }

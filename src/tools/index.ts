@@ -53,6 +53,7 @@ export {
     ToolAuthorizationError,
     type StringParamOptions,
     type NumberParamOptions,
+    type BooleanParamOptions,
 } from "./params.js";
 export {
     extractToolSchema,
