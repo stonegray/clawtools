@@ -6,21 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] — changes since v0.1.0
+## [0.2.0] — 2026-03-01
 
-53 commits, 64 files changed, 4 144 insertions, 1 389 deletions.
+53 commits, 64 files changed, 4 144 insertions, 1 389 deletions.
 Test suite: 552 tests across 21 files (up from ~307 at v0.1.0).
+
+## [Unreleased]
+
+*No changes yet.*
 
 ### Added
 
-- **Built-in LLM connectors** — pi-ai bridge wraps Anthropic, OpenAI, Google,
-  Bedrock, and other providers as first-class `Connector` objects with streaming,
-  model catalogs, and auth resolution. `createClawtools()` auto-registers them.
 - **Debug connector** (`builtin/clawfice-debug`) — 8 deterministic models for
   testing (echo, parrot, silent, upper-parrot, tagged-parrot, sys-echo,
   inspect-echo, thinking-stream).
-- **`FsBridge` type + `createNodeBridge()`** — file-system abstraction required
-  by read/write/edit tools; ships with a Node.js implementation.
 - **Message types** — `UserMessage`, `AssistantMessage`, `ToolResultMessage`
   exported from `clawtools`; `StreamContext.messages` accepts the union.
 - **`serializeModel()` / `deserializeModel()`** — lossless camelCase↔snake_case
@@ -41,18 +40,8 @@ Test suite: 552 tests across 21 files (up from ~307 at v0.1.0).
   mid-stream cancellation.
 - **Stream event JSDoc** — every `StreamEvent` variant documented; `toolcall_start`
   and `toolcall_delta` gain optional `id` field.
-- **SECURITY.md** — security reporting guide distinguishing clawtools vs OpenClaw
-  scope.
-- **ESLint 9 + typescript-eslint** — type-aware linting for `src/` and `test/`
-  with separate tsconfig projects.
 - **Comprehensive test suite** — 552 tests covering unit, integration, E2E, build
   verification, stream-event invariants, and signal/abort behavior.
-- **Agentic loop example** (`examples/agentic/`) — full init→stream→tool-use→loop
-  example with real connector + tool execution.
-- **Custom connector example** (`examples/connector/custom/`) — self-contained
-  echo connector demonstrating `ConnectorRegistry.register()`.
-- **OpenAI built-in connector example** (`examples/connector/openai/`) — uses
-  `discoverBuiltinConnectors()` instead of raw fetch.
 
 ### Changed
 
