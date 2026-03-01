@@ -41,7 +41,7 @@ const tools = ct.tools.resolveAll({
 
 // Stream a response with tool use
 const connector = ct.connectors.getByProvider("anthropic");
-const model = connector.models!.find(m => m.id === "claude-opus-4-6")!;
+const model = connector.models.find(m => m.id === "claude-opus-4-6")!;
 
 for await (const event of connector.stream(model, {
   systemPrompt: "You are a helpful assistant.",
