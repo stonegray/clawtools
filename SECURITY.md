@@ -22,26 +22,12 @@ Follow the [OpenClaw Security Policy](https://github.com/openclaw/openclaw/blob/
 - A **dependency** listed in clawtools' own `package.json` (e.g., `ajv`, `@sinclair/typebox`, `undici`)
 - **Examples, tests, or documentation** shipped in this repository
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/stonegray/clawtools/security/advisories/new) to file a report. If that is unavailable, email **[security@stonegray.dev](mailto:security@stonegray.dev)**.
+Use [GitHub Private Vulnerability Reporting](https://github.com/stonegray/clawtools/security/advisories/new) to file a report.
 
 ### Not sure?
 
 If you're uncertain which project is affected, report to **clawtools** — we'll triage and redirect to OpenClaw if needed.
 
-## Supported Versions
-
-Only the latest published release on the `main` branch is actively supported with security fixes.
-
-| Version       | Supported |
-| ------------- | --------- |
-| latest (`main`) | Yes     |
-| older releases  | No      |
-
-## Disclosure Timeline
-
-- We aim to acknowledge reports within **3 business days**.
-- We target a fix or mitigation within **30 days** of confirmation.
-- We will coordinate disclosure timing with you before publishing any advisory.
 
 ## Out of Scope
 
