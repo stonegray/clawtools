@@ -1,5 +1,7 @@
 # clawtools Integration Review
 
+> **Status (2026-03-01):** All 11 items below have been implemented. This document is retained as a historical reference. Deprecated function aliases (`createClawtoolsAsync`, `discoverBuiltinConnectorsAsync`) are still exported for backwards compatibility.
+
 *Written from the perspective of implementing Clawfice's `ClawtoolsAdapter` — the bridge between clawtools' connector discovery and Clawfice's provider/model registry. All friction points below are grounded in real code; references to specific adapter lines are to [`packages/core/src/connectors/clawtools-adapter.ts`](../packages/core/src/connectors/clawtools-adapter.ts).*
 
 ---
@@ -12,7 +14,7 @@ The single most impactful change would be making async the default naming conven
 
 ---
 
-## 0. Breaking Change: Async-by-Default Naming Convention
+## 0. Breaking Change: Async-by-Default Naming Convention ✅ DONE
 
 ### Overview
 
@@ -107,7 +109,7 @@ This change impacts all public async APIs in clawtools:
 
 ---
 
-## 1. The Facade Doesn't Close the Loop
+## 1. The Facade Doesn't Close the Loop ✅ DONE
 
 ### What Exists
 
@@ -152,7 +154,7 @@ The fix is small. The iteration pattern is the missing link between the facade a
 
 ---
 
-## 2. `discoverBuiltinConnectorsAsync()` Called Twice
+## 2. `discoverBuiltinConnectorsAsync()` Called Twice ✅ DONE
 
 Because `createClawtools()` wasn't usable as described above, the Clawfice adapter calls `discoverBuiltinConnectors()` in two separate top-level functions:
 
@@ -167,7 +169,7 @@ These are called independently by two different parts of the bootstrap sequence,
 
 ---
 
-## 3. camelCase vs. snake_case Impedance Mismatch
+## 3. camelCase vs. snake_case Impedance Mismatch ✅ DONE
 
 `ModelDescriptor` uses camelCase throughout:
 
@@ -215,7 +217,7 @@ Pick one convention and stick to it. For a TypeScript library targeting the Node
 
 ---
 
-## 4. `StreamEvent` Variant Completeness: Undocumented Invariants
+## 4. `StreamEvent` Variant Completeness: Undocumented Invariants ✅ DONE
 
 The `StreamEvent` union currently has 10 variants:
 
@@ -245,7 +247,7 @@ The `done` event's `usage` field should also not be optional for providers that 
 
 ---
 
-## 5. `toolcall_end` Has No Tool Call ID in `toolcall_start`
+## 5. `toolcall_end` Has No Tool Call ID in `toolcall_start` ✅ DONE
 
 Looking at the stream event types:
 
@@ -265,7 +267,7 @@ Add an optional `id` field to `toolcall_start` and `toolcall_delta` so multi-too
 
 ---
 
-## 6. `StreamContext.tools[].input_schema` Is Untyped
+## 6. `StreamContext.tools[].input_schema` Is Untyped ✅ DONE
 
 ```ts
 interface StreamContext {
@@ -285,7 +287,7 @@ Type it as `Record<string, unknown>` at minimum, or define a `JsonSchema` interf
 
 ---
 
-## 7. `ResolvedAuth.apiKey` Optionality Is Surprising
+## 7. `ResolvedAuth.apiKey` Optionality Is Surprising ✅ DONE
 
 ```ts
 interface ResolvedAuth {
@@ -322,7 +324,7 @@ type ResolvedAuth =
 
 ---
 
-## 8. `Connector.models` Is Optional But Never Actually Absent
+## 8. `Connector.models` Is Optional But Never Actually Absent ✅ DONE
 
 ```ts
 interface Connector {
@@ -338,7 +340,7 @@ Either make `models` required (it's clearly intended to be populated), or keep i
 
 ---
 
-## 9. No AbortSignal Guidance
+## 9. No AbortSignal Guidance ✅ DONE
 
 `StreamOptions.signal?: AbortSignal` exists, which is great — it means the underlying HTTP/fetch/SSE can be cancelled. But there's no documentation on how it fits into the stream loop or what happens to the async iterator on abort (does it throw? return cleanly?).
 
@@ -359,7 +361,7 @@ And document what the stream emits when aborted: does it emit `{ type: "error", 
 
 ---
 
-## 10. Minor: `done.stopReason: "error"` Overlaps With `error` Event
+## 10. Minor: `done.stopReason: "error"` Overlaps With `error` Event ✅ DONE
 
 The `done` event has `stopReason: "stop" | "toolUse" | "length" | "error"`. There's also a separate `{ type: "error", error: string }` event. This creates two different ways a stream can signal failure:
 
@@ -376,20 +378,22 @@ If `done` with `stopReason: "error"` is a valid terminal state that carries no a
 
 ## Overall Verdict
 
-The library is in good shape. The connector abstraction is clean, the auth resolution is practical, and the stream event model is expressive. The pain points above are all fixable without a breaking API change:
+> **All items resolved as of v0.2.0.**
 
-| Priority | Issue | Effort |
+The library is in good shape. The connector abstraction is clean, the auth resolution is practical, and the stream event model is expressive. The pain points above have all been addressed:
+
+| Priority | Issue | Status |
 |---|---|---|
-| High | Async-by-default naming: rename `*Async` functions to drop suffix; add `*Sync` variants (§1, §2) | Small |
-| High | Facade doesn't expose `Connector[]` ergonomically (§1) | Small |
-| High | camelCase `ModelDescriptor` forces manual mapping (§3) | Medium (utility function) |
-| Medium | Double `discoverBuiltinConnectors()` calls (§2) | Small (caching) |
-| Medium | Stream protocol not documented (§4) | Documentation |
-| Medium | `ResolvedAuth` discriminated union (§7) | Small |
-| Low | `toolcall_start` missing ID (§5) | Non-breaking addition |
-| Low | `input_schema: unknown` (§6) | Small type change |
-| Low | `Connector.models` optionality (§8) | Clarify intent |
-| Low | AbortSignal guidance (§9) | Documentation |
-| Low | `done.stopReason: "error"` vs `error` event (§10) | Documentation |
+| High | Async-by-default naming: rename `*Async` functions to drop suffix; add `*Sync` variants (§0) | ✅ Done |
+| High | Facade doesn't expose `Connector[]` ergonomically (§1) | ✅ Done — `[Symbol.iterator]` |
+| High | camelCase `ModelDescriptor` forces manual mapping (§3) | ✅ Done — `serializeModel()` / `deserializeModel()` |
+| Medium | Double `discoverBuiltinConnectors()` calls (§2) | ✅ Done — memoized |
+| Medium | Stream protocol not documented (§4) | ✅ Done — JSDoc on `StreamEvent` |
+| Medium | `ResolvedAuth` discriminated union (§7) | ✅ Done — discriminated on `mode` |
+| Low | `toolcall_start` missing ID (§5) | ✅ Done — optional `id` field |
+| Low | `input_schema: unknown` (§6) | ✅ Done — `JsonSchema` interface |
+| Low | `Connector.models` optionality (§8) | ✅ Done — `models` required + optional `listModels()` |
+| Low | AbortSignal guidance (§9) | ✅ Done — JSDoc examples |
+| Low | `done.stopReason: "error"` vs `error` event (§10) | ✅ Done — documented in StreamEvent JSDoc |
 
-The single highest-leverage change is **adopting async-by-default naming** (`createClawtools()` instead of `createClawtoolsAsync()`) and making the connector iteration story obvious from the facade. If that one gap is closed, the facade becomes genuinely useful as a unified entry point and most of the "double discovery" problem disappears automatically.
+The single highest-leverage change was **adopting async-by-default naming** (`createClawtools()` instead of `createClawtoolsAsync()`) and making the connector iteration story obvious from the facade. With that gap closed, the facade is genuinely useful as a unified entry point and the "double discovery" problem has disappeared.
