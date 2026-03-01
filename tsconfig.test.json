@@ -2,7 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "baseUrl": ".",
     "noEmit": true,
     "paths": {
       "clawtools": ["./src/index.ts"],

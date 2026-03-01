@@ -170,7 +170,7 @@ export function extractToolSchemas(
             return {
                 ...schema,
                 input_schema: cleanSchemaForGemini(
-                    schema.input_schema as Record<string, unknown>,
+                    schema.input_schema,
                 ),
             };
         }

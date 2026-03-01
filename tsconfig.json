@@ -16,7 +16,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
     "paths": {
       "clawtools": ["./src/index.ts"],
       "clawtools/tools": ["./src/tools/index.ts"],

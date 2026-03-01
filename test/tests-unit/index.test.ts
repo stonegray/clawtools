@@ -205,7 +205,7 @@ describe("createClawtools (async)", () => {
                 for (const connector of ct.connectors.list()) {
                     expect(connector.provider).toBeTruthy();
                     expect(Array.isArray(connector.models)).toBe(true);
-                    expect(connector.models!.length).toBeGreaterThan(0);
+                    expect(connector.models.length).toBeGreaterThan(0);
                 }
             },
             30_000,
