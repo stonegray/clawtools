@@ -172,7 +172,7 @@ describe("schema extraction in pipeline", () => {
             expect(schema.name).toBeTruthy();
             expect(schema.description).toBeTruthy();
             expect(schema.input_schema).toBeDefined();
-            expect((schema.input_schema as Record<string, unknown>).type).toBe("object");
+            expect((schema.input_schema).type).toBe("object");
         }
 
         // Schemas should be usable in a StreamContext

@@ -22,12 +22,12 @@ describe("Schema utilities", () => {
 
         it("normalizes the schema so type is always object", () => {
             const s = extractToolSchema(echoTool);
-            expect((s.input_schema as Record<string, unknown>).type).toBe("object");
+            expect((s.input_schema).type).toBe("object");
         });
 
         it("preserves the tool's properties in input_schema", () => {
             const s = extractToolSchema(echoTool);
-            const props = (s.input_schema as Record<string, unknown>).properties as Record<
+            const props = (s.input_schema).properties as Record<
                 string,
                 unknown
             >;
@@ -55,7 +55,7 @@ describe("Schema utilities", () => {
                 } as Record<string, unknown>,
             };
             const [schema] = extractToolSchemas([toolWithExtras], "google-generative-ai");
-            const input = schema.input_schema as Record<string, unknown>;
+            const input = schema.input_schema;
             expect(input).not.toHaveProperty("additionalProperties");
             expect(input).not.toHaveProperty("$schema");
         });
@@ -70,7 +70,7 @@ describe("Schema utilities", () => {
                 } as Record<string, unknown>,
             };
             const [schema] = extractToolSchemas([toolWithExtras], "anthropic");
-            const input = schema.input_schema as Record<string, unknown>;
+            const input = schema.input_schema;
             expect(input).toHaveProperty("additionalProperties");
         });
     });

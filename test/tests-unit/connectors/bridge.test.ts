@@ -122,7 +122,7 @@ describe("getBuiltinConnectors", () => {
     it("models array is non-empty", () => {
         const [c] = getBuiltinConnectors();
         expect(Array.isArray(c.models)).toBe(true);
-        expect(c.models!.length).toBeGreaterThan(0);
+        expect(c.models.length).toBeGreaterThan(0);
     });
 });
 
@@ -131,7 +131,7 @@ describe("getBuiltinConnectors", () => {
 // ---------------------------------------------------------------------------
 
 describe("toDescriptor (reflected through connector.models)", () => {
-    const model = () => getBuiltinConnectors()[0].models![0];
+    const model = () => getBuiltinConnectors()[0].models[0];
 
     it("preserves id", () => expect(model().id).toBe("mock-model"));
     it("preserves api", () => expect(model().api).toBe("openai-completions"));

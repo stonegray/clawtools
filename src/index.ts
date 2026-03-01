@@ -162,7 +162,6 @@ import { discoverCoreTools, discoverCoreToolsAsync, type DiscoveryOptions } from
 import {
     discoverExtensions,
     discoverBuiltinConnectors,
-    discoverBuiltinConnectorsAsync,
     type ExtensionInfo,
 } from "./connectors/discovery.js";
 

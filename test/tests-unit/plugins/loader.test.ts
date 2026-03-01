@@ -84,7 +84,7 @@ describe("Plugin loader", () => {
             const connector = plugin!.connectors[0];
             const events = [];
             for await (const event of connector.stream(
-                connector.models![0],
+                connector.models[0],
                 { messages: [{ role: "user", content: "hi" }] },
                 {},
             )) {

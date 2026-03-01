@@ -90,7 +90,7 @@ describe("plugin connector streaming", () => {
 
         const events: Array<{ type: string; [key: string]: unknown }> = [];
         for await (const event of connector!.stream(
-            connector!.models![0],
+            connector!.models[0],
             { messages: [{ role: "user", content: "hi from e2e" }] },
             {},
         )) {
